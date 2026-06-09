@@ -13,6 +13,9 @@ if [ "${SEED_DEMO_DATA:-false}" = "true" ]; then
   echo "[render] seeding demo data"
   python manage.py seed_demo_data || true
 
+  echo "[render] polishing demo hall layouts"
+  python manage.py polish_demo_layouts || true
+
   echo "[render] syncing hall capacities"
   python manage.py sync_hall_capacities || true
 fi
