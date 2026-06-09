@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Интерьер кафе с мягким вечерним светом">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1e293b"/><stop offset="0.55" stop-color="#334155"/><stop offset="1" stop-color="#0f172a"/></linearGradient>
+    <radialGradient id="lamp" cx="50%" cy="12%" r="42%"><stop offset="0" stop-color="#fde68a" stop-opacity="0.92"/><stop offset="1" stop-color="#fde68a" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <rect width="1280" height="360" fill="url(#lamp)"/>
+  <rect x="0" y="430" width="1280" height="290" fill="#111827" opacity="0.58"/>
+  <path d="M0 405 C210 345 350 350 555 405 C745 455 925 455 1280 392 L1280 720 L0 720 Z" fill="#020617" opacity="0.42"/>
+  <g opacity="0.95">
+    <rect x="114" y="285" width="210" height="130" rx="28" fill="#f8fafc" opacity="0.12"/>
+    <rect x="450" y="270" width="250" height="150" rx="30" fill="#f8fafc" opacity="0.10"/>
+    <rect x="820" y="292" width="260" height="132" rx="30" fill="#f8fafc" opacity="0.13"/>
+    <circle cx="220" cy="205" r="42" fill="#facc15" opacity="0.58"/>
+    <circle cx="575" cy="188" r="46" fill="#fbbf24" opacity="0.48"/>
+    <circle cx="950" cy="214" r="38" fill="#f59e0b" opacity="0.5"/>
+  </g>
+  <g fill="#e2e8f0" opacity="0.7">
+    <rect x="150" y="475" width="155" height="22" rx="11"/>
+    <rect x="478" y="472" width="190" height="22" rx="11"/>
+    <rect x="846" y="476" width="205" height="22" rx="11"/>
+  </g>
+  <text x="64" y="650" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="800" fill="#ffffff">WebTavern</text>
+  <text x="64" y="690" font-family="Inter, Arial, sans-serif" font-size="22" fill="#cbd5e1">демонстрационное фото интерьера</text>
+</svg>
