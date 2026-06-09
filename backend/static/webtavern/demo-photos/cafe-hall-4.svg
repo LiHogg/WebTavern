@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Панорамный ресторанный зал">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0ea5e9"/><stop offset="0.52" stop-color="#7dd3fc"/><stop offset="1" stop-color="#f8fafc"/></linearGradient>
+    <linearGradient id="room" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0f172a"/><stop offset="1" stop-color="#334155"/></linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#sky)"/>
+  <path d="M0 315 C190 260 320 285 490 250 C650 217 800 292 980 248 C1120 214 1195 224 1280 205 L1280 720 L0 720 Z" fill="#0369a1" opacity="0.28"/>
+  <rect x="0" y="378" width="1280" height="342" fill="url(#room)"/>
+  <g fill="#ffffff" opacity="0.58">
+    <rect x="80" y="78" width="220" height="252" rx="24"/>
+    <rect x="352" y="64" width="260" height="267" rx="24"/>
+    <rect x="664" y="78" width="260" height="252" rx="24"/>
+    <rect x="976" y="64" width="224" height="267" rx="24"/>
+  </g>
+  <g fill="#020617" opacity="0.46">
+    <ellipse cx="238" cy="520" rx="120" ry="34"/>
+    <ellipse cx="640" cy="520" rx="138" ry="36"/>
+    <ellipse cx="1040" cy="520" rx="124" ry="34"/>
+  </g>
+  <g fill="#e0f2fe" opacity="0.9">
+    <rect x="142" y="480" width="192" height="36" rx="18"/>
+    <rect x="532" y="478" width="216" height="38" rx="19"/>
+    <rect x="948" y="480" width="184" height="36" rx="18"/>
+  </g>
+  <text x="64" y="650" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="800" fill="#ffffff">WebTavern</text>
+  <text x="64" y="690" font-family="Inter, Arial, sans-serif" font-size="22" fill="#dbeafe">демонстрационное фото панорамного зала</text>
+</svg>
