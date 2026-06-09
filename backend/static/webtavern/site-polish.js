@@ -144,7 +144,7 @@
   }
 
   function deconflictLayoutItems(stage) {
-    if (!stage || stage.dataset.layoutDeconflictDone === '1') return;
+    if (!stage) return;
     const tables = Array.from(stage.querySelectorAll('.layout-viewer-table-button'));
     if (!tables.length) return;
 
@@ -167,8 +167,6 @@
         }
         occupied.push(elementBox(table, 14));
       });
-
-    stage.dataset.layoutDeconflictDone = '1';
   }
 
   function polishVenueLayoutStage(root) {
