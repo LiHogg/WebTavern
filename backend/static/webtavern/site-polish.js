@@ -169,6 +169,62 @@
       });
   }
 
+  function parseScale(value) {
+    const raw = String(value || '');
+    const match = raw.match(/scale\(([^)]+)\)/);
+    if (!match) return 1;
+    const parsed = Number.parseFloat(match[1]);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  }
+
+  function fitVenueLayoutStage(stage) {
+    if (!stage) return;
+    const wrapper = stage.closest('.layout-stage-wrapper, .layout-preview-wrapper');
+    const sizer = stage.closest('.layout-stage-sizer');
+    if (!wrapper) return;
+
+    const naturalWidth = stage.offsetWidth || Number.parseFloat(stage.style.width) || 0;
+    const naturalHeight = stage.offsetHeight || Number.parseFloat(stage.style.height) || 0;
+    const availableWidth = wrapper.clientWidth - 2;
+    if (!naturalWidth || !naturalHeight || availableWidth <= 0) return;
+
+    const inlineScale = parseScale(stage.style.transform || window.getComputedStyle(stage).transform);
+    const previousApplied = Number.parseFloat(stage.dataset.webtavernAppliedScale || '');
+    let requestedScale = Number.parseFloat(stage.dataset.webtavernRequestedScale || '');
+    if (!Number.isFinite(requestedScale) || !Number.isFinite(previousApplied) || Math.abs(inlineScale - previousApplied) > 0.015) {
+      requestedScale = inlineScale;
+    }
+
+    const fitScale = Math.min(1, Math.max(0.08, availableWidth / naturalWidth));
+    const appliedScale = Math.min(requestedScale, fitScale);
+
+    stage.dataset.webtavernRequestedScale = String(requestedScale);
+    stage.dataset.webtavernAppliedScale = String(appliedScale);
+    stage.style.transformOrigin = 'top left';
+    stage.style.transform = `scale(${appliedScale})`;
+    stage.classList.add('layout-stage-responsive-fit');
+    wrapper.classList.add('layout-stage-wrapper-responsive-fit');
+
+    const fittedWidth = Math.ceil(naturalWidth * appliedScale);
+    const fittedHeight = Math.ceil(naturalHeight * appliedScale);
+    if (sizer) {
+      sizer.style.width = `${fittedWidth}px`;
+      sizer.style.maxWidth = '100%';
+      sizer.style.height = `${fittedHeight}px`;
+    }
+    wrapper.style.setProperty('--layout-fitted-width', `${fittedWidth}px`);
+    wrapper.style.setProperty('--layout-fitted-height', `${fittedHeight}px`);
+  }
+
+  let fitFrame = 0;
+  function scheduleResponsiveLayoutFit(root) {
+    window.cancelAnimationFrame(fitFrame);
+    fitFrame = window.requestAnimationFrame(() => {
+      const scope = root || document;
+      scope.querySelectorAll('.venue-layout-viewer .layout-stage').forEach(fitVenueLayoutStage);
+    });
+  }
+
   function polishVenueLayoutStage(root) {
     const scope = root || document;
     scope.querySelectorAll('.venue-layout-viewer .layout-stage').forEach((stage) => {
@@ -177,7 +233,10 @@
         wall.classList.add('layout-viewer-wall-visible');
         wall.setAttribute('aria-hidden', 'true');
       });
-      window.requestAnimationFrame(() => deconflictLayoutItems(stage));
+      window.requestAnimationFrame(() => {
+        deconflictLayoutItems(stage);
+        fitVenueLayoutStage(stage);
+      });
     });
   }
 
@@ -212,10 +271,13 @@
   function boot() {
     enhanceVenueCards(document);
     polishVenueDetailPage(document);
+    window.addEventListener('resize', () => scheduleResponsiveLayoutFit(document));
+    window.addEventListener('orientationchange', () => scheduleResponsiveLayoutFit(document));
     const observer = new MutationObserver((mutations) => {
       if (mutations.some((mutation) => mutation.addedNodes && mutation.addedNodes.length)) {
         enhanceVenueCards(document);
         polishVenueDetailPage(document);
+        scheduleResponsiveLayoutFit(document);
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
