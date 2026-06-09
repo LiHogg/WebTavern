@@ -1,12 +1,13 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 
 from apps.audit_logs.views import ManagerActionLogViewSet
 from apps.booking_rules.views import BookingPriceRuleViewSet, VenueBookingRuleViewSet
 from apps.bookings.views import BookingViewSet
+from apps.common.media_views import media_file
 from apps.common.views import healthcheck, home_overview, manager_overview, owner_overview
 from apps.common.page_views import (
     account_page,
@@ -58,6 +59,7 @@ urlpatterns = [
     path("api/v1/auth/", include((auth_urlpatterns, "auth"))),
     path("api/v1/payments/initialize/", initialize_payment, name="payment-initialize"),
     path("api/v1/", include(router.urls)),
+    re_path(r"^media/(?P<path>.*)$", media_file, name="media-file"),
     path("", home_page, name="home-page"),
     path("login/", login_page, name="login-page"),
     path("register/", register_page, name="register-page"),
