@@ -32,19 +32,35 @@
     return demoPhotos[Math.abs(hashString(seed)) % demoPhotos.length];
   }
 
+  function buildCoverImage(url, title) {
+    return `<img src="${url}" alt="${String(title || 'Заведение WebTavern').replace(/"/g, '&quot;')}" loading="lazy">`;
+  }
+
   function enhanceVenueCards(root) {
     const cards = Array.from((root || document).querySelectorAll('.venue-card'));
     cards.forEach((card, index) => {
-      if (card.querySelector('.venue-card-cover')) return;
       const link = card.querySelector('a[href*="/venues/"]');
       const href = link ? link.getAttribute('href') : '';
       const slug = extractVenueSlug(href);
       const title = card.querySelector('h1, h2, h3')?.textContent?.trim() || 'Заведение WebTavern';
       const slugSeed = href || `${title}-${index}`;
+      const photoUrl = pickPhoto(slugSeed, slug);
+      const existingCover = card.querySelector('.venue-card-cover');
+
+      if (existingCover) {
+        const existingImage = existingCover.querySelector('img[src]');
+        const isEmptyCover = existingCover.classList.contains('venue-card-cover-empty') || !existingImage;
+        if (!isEmptyCover) return;
+        existingCover.classList.remove('venue-card-cover-empty');
+        existingCover.classList.add('venue-card-cover-fallback');
+        existingCover.innerHTML = buildCoverImage(photoUrl, title);
+        return;
+      }
+
       const body = card.querySelector('.venue-card-body') || card.firstElementChild;
       const cover = document.createElement('div');
       cover.className = 'venue-card-cover venue-card-cover-fallback';
-      cover.innerHTML = `<img src="${pickPhoto(slugSeed, slug)}" alt="${title.replace(/"/g, '&quot;')}" loading="lazy">`;
+      cover.innerHTML = buildCoverImage(photoUrl, title);
       if (body) card.insertBefore(cover, body);
       else card.prepend(cover);
     });
