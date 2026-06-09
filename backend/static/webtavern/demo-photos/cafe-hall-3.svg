@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Неоновый зал антикафе и настольных игр">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#111827"/><stop offset="0.45" stop-color="#312e81"/><stop offset="1" stop-color="#020617"/></linearGradient>
+    <radialGradient id="pink" cx="82%" cy="25%" r="42%"><stop offset="0" stop-color="#e879f9" stop-opacity="0.7"/><stop offset="1" stop-color="#e879f9" stop-opacity="0"/></radialGradient>
+    <radialGradient id="cyan" cx="14%" cy="20%" r="40%"><stop offset="0" stop-color="#22d3ee" stop-opacity="0.62"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <rect width="1280" height="720" fill="url(#pink)"/>
+  <rect width="1280" height="720" fill="url(#cyan)"/>
+  <rect x="0" y="438" width="1280" height="282" fill="#020617" opacity="0.62"/>
+  <g opacity="0.84">
+    <rect x="100" y="150" width="270" height="170" rx="30" fill="#f0abfc" opacity="0.16"/>
+    <rect x="500" y="135" width="280" height="190" rx="34" fill="#67e8f9" opacity="0.12"/>
+    <rect x="910" y="155" width="230" height="165" rx="32" fill="#c4b5fd" opacity="0.16"/>
+  </g>
+  <g fill="none" stroke-width="9" opacity="0.82">
+    <path d="M126 490 H350" stroke="#22d3ee"/>
+    <path d="M508 500 H768" stroke="#e879f9"/>
+    <path d="M902 490 H1128" stroke="#a78bfa"/>
+  </g>
+  <g fill="#ffffff" opacity="0.8">
+    <circle cx="238" cy="490" r="30"/>
+    <circle cx="638" cy="500" r="34"/>
+    <circle cx="1015" cy="490" r="32"/>
+  </g>
+  <text x="64" y="650" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="800" fill="#ffffff">WebTavern</text>
+  <text x="64" y="690" font-family="Inter, Arial, sans-serif" font-size="22" fill="#ddd6fe">демонстрационное фото неоновой зоны</text>
+</svg>
