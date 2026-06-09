@@ -66,11 +66,52 @@
     });
   }
 
+  function polishVenueLayoutStage(root) {
+    const scope = root || document;
+    scope.querySelectorAll('.venue-layout-viewer .layout-stage').forEach((stage) => {
+      stage.classList.add('layout-stage-polished');
+      stage.querySelectorAll('.layout-editor-item-wall').forEach((wall) => {
+        wall.classList.add('layout-viewer-wall-visible');
+        wall.setAttribute('aria-hidden', 'true');
+      });
+    });
+  }
+
+  function balanceVenueDetailColumns(root) {
+    const scope = root || document;
+    const leftStack = scope.querySelector('.venue-detail-left-stack') || document.querySelector('.venue-detail-left-stack');
+    const bookingPanel = scope.querySelector('.venue-detail-booking-panel') || document.querySelector('.venue-detail-booking-panel');
+    if (!leftStack || !bookingPanel) return;
+    if (leftStack.querySelector('.venue-side-hall-panel')) return;
+
+    const toolbar = bookingPanel.querySelector('.venue-layout-toolbar');
+    const summaryGrid = bookingPanel.querySelector('.venue-layout-summary-grid');
+    if (!toolbar && !summaryGrid) return;
+
+    const panel = document.createElement('article');
+    panel.className = 'panel venue-side-hall-panel';
+    panel.innerHTML = '<div class="section-topline"><span class="section-kicker">Помещение</span><h2>Зал и столы</h2></div>';
+
+    if (toolbar) panel.appendChild(toolbar);
+    if (summaryGrid) panel.appendChild(summaryGrid);
+
+    const photoLibrary = leftStack.querySelector('.venue-photo-library');
+    if (photoLibrary) leftStack.insertBefore(panel, photoLibrary);
+    else leftStack.appendChild(panel);
+  }
+
+  function polishVenueDetailPage(root) {
+    balanceVenueDetailColumns(root);
+    polishVenueLayoutStage(root);
+  }
+
   function boot() {
     enhanceVenueCards(document);
+    polishVenueDetailPage(document);
     const observer = new MutationObserver((mutations) => {
       if (mutations.some((mutation) => mutation.addedNodes && mutation.addedNodes.length)) {
         enhanceVenueCards(document);
+        polishVenueDetailPage(document);
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
