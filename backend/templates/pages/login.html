@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — вход{% endblock %}
+{% block page_id %}login{% endblock %}
+{% block content %}
+<section class="page-stack narrow-page">
+  <section class="card">
+    <span class="section-kicker">Вход в систему</span>
+    <h1>Авторизация</h1>
+    <p>Введите email и пароль или подставьте готовый демо-аккаунт для быстрой проверки страниц проекта.</p>
+  </section>
+
+  <section class="grid grid-two">
+    <article class="card compact-card">
+      <h2>Демо-аккаунты</h2>
+      <div class="demo-list">
+        <button type="button" class="demo-account" data-demo-email="owner@webtavern.local" data-demo-password="DemoPass123!">
+          <strong>Владелец</strong>
+          <span>owner@webtavern.local</span>
+          <small>Подходит для проверки кабинета владельца.</small>
+        </button>
+        <button type="button" class="demo-account" data-demo-email="client@webtavern.local" data-demo-password="DemoPass123!">
+          <strong>Клиент</strong>
+          <span>client@webtavern.local</span>
+          <small>Подходит для проверки профиля и каталога заведений.</small>
+        </button>
+      </div>
+    </article>
+
+    <article class="card compact-card">
+      <h2>Форма входа</h2>
+      <form class="form" id="login-form" novalidate>
+        <label class="field">
+          <span>Email</span>
+          <input name="email" id="login-email" type="text" inputmode="email" autocomplete="username" placeholder="mail@example.com" required>
+        </label>
+        <label class="field">
+          <span>Пароль</span>
+          <input name="password" id="login-password" type="password" autocomplete="current-password" placeholder="Введите пароль" required>
+        </label>
+        <button class="button button-primary" type="submit" id="login-submit">Войти</button>
+      </form>
+      <div class="top-gap helper-links">
+        <span class="muted-block">Нет аккаунта?</span>
+        <a class="text-link" href="/register/">Перейти к регистрации</a>
+      </div>
+      <p class="success-text top-gap hidden" id="login-message"></p>
+      <p class="error-text top-gap pre-line hidden" id="login-error"></p>
+    </article>
+  </section>
+</section>
+{% endblock %}

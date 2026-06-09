@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — добавить заведение{% endblock %}
+{% block page_id %}partner{% endblock %}
+{% block content %}
+<section class="page-stack narrow-page">
+  <section class="card">
+    <span class="section-kicker">Добавление заведения</span>
+    <h1>Создать черновик площадки</h1>
+    <p>После входа под владельцем эта форма создаёт новое заведение через API и переводит вас в кабинет владельца.</p>
+  </section>
+  <section class="card">
+    <form class="form" id="partner-form">
+      <label class="field"><span>Название</span><input name="name" required></label>
+      <div class="grid grid-two">
+        <label class="field"><span>Город</span><input name="city" required></label>
+        <label class="field"><span>Адрес</span><input name="address" required></label>
+      </div>
+      <label class="field"><span>Краткое описание</span><input name="short_description"></label>
+      <label class="field"><span>Полное описание</span><textarea name="description" rows="5"></textarea></label>
+      <button class="button button-primary" type="submit" id="partner-submit">Создать черновик</button>
+    </form>
+    <p class="success-text top-gap hidden" id="partner-message"></p>
+    <p class="error-text top-gap hidden" id="partner-error"></p>
+  </section>
+</section>
+{% endblock %}

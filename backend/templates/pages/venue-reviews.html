@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — отзывы{% endblock %}
+{% block page_id %}venue-reviews{% endblock %}
+{% block venue_slug %}{{ slug }}{% endblock %}
+{% block content %}
+<section id="venue-reviews-loading" class="panel">Загрузка страницы отзывов…</section>
+<section id="venue-reviews-error" class="panel panel-error hidden"></section>
+<section id="venue-reviews-content" class="page-stack hidden"></section>
+{% endblock %}

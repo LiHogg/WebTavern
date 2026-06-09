@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — уведомления{% endblock %}
+{% block page_id %}notifications{% endblock %}
+{% block content %}
+<section class="page-stack narrow-page">
+  <section class="card">
+    <span class="section-kicker">Центр уведомлений</span>
+    <h1>Все уведомления</h1>
+    <p class="hero-text">Здесь собраны все события по бронированиям, оплатам, отзывам и действиям по вашим заведениям. Из уведомления можно сразу перейти к нужной странице.</p>
+  </section>
+
+  <section class="card" id="notifications-auth-warning">Проверяем доступ…</section>
+  <section class="card error-card hidden" id="notifications-error"></section>
+
+  <section class="hidden page-stack" id="notifications-dashboard">
+    <article class="card compact-card">
+      <div class="definition-list" id="notifications-summary">
+        <div><span>Непрочитанные</span><strong>0</strong></div>
+        <div><span>Сегодня</span><strong>0</strong></div>
+        <div><span>Всего</span><strong>0</strong></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-heading-row">
+        <div><span class="section-kicker">Фильтры</span><h2>Уточните список уведомлений</h2></div>
+        <div class="button-row">
+          <button class="button button-secondary" type="button" id="notifications-read-all">Отметить всё прочитанным</button>
+          <button class="button button-secondary" type="button" id="notifications-refresh">Обновить</button>
+        </div>
+      </div>
+      <div class="grid grid-three top-gap">
+        <label class="field selector-field">
+          <span>Статус</span>
+          <select id="notifications-read-filter">
+            <option value="">Все</option>
+            <option value="false">Непрочитанные</option>
+            <option value="true">Прочитанные</option>
+          </select>
+        </label>
+        <label class="field selector-field">
+          <span>Тип</span>
+          <select id="notifications-type-filter">
+            <option value="">Все типы</option>
+            <option value="booking_hold_created">Резерв</option>
+            <option value="booking_created">Бронь создана</option>
+            <option value="booking_confirmed">Бронь подтверждена</option>
+            <option value="booking_cancelled">Бронь отменена</option>
+            <option value="booking_rescheduled">Бронь перенесена</option>
+            <option value="payment_succeeded">Оплата успешна</option>
+            <option value="payment_cancelled">Оплата отменена</option>
+            <option value="review_created">Новый отзыв</option>
+            <option value="review_reply">Ответ на отзыв</option>
+            <option value="review_liked">Лайк на отзыв</option>
+            <option value="venue_moderation">Модерация заведения</option>
+          </select>
+        </label>
+        <label class="field selector-field">
+          <span>Заведение</span>
+          <select id="notifications-venue-filter"></select>
+        </label>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-heading-row">
+        <div><span class="section-kicker">Лента событий</span><h2>Последние уведомления</h2></div>
+        <p class="muted-block" id="notifications-caption">Загрузка уведомлений...</p>
+      </div>
+      <div class="page-stack top-gap" id="notifications-list"></div>
+      <p class="muted-block hidden" id="notifications-empty">Уведомлений по текущим фильтрам нет.</p>
+    </article>
+
+    <article class="card">
+      <div class="card-heading-row">
+        <div>
+          <span class="section-kicker">Внешние каналы</span>
+          <h2>Email и SMS</h2>
+          <p class="muted-block">Настройте, куда дублировать важные уведомления по бронированиям. Email в локальной сборке приходит в MailHog, SMS в демо-режиме сохраняется в журнале и пишется в логи backend.</p>
+        </div>
+        <div class="button-row">
+          <button class="button button-secondary" type="button" id="notifications-test-channels">Отправить тест</button>
+          <button class="button button-primary" type="button" id="notifications-save-preferences">Сохранить каналы</button>
+        </div>
+      </div>
+      <div class="grid grid-two top-gap" id="notifications-preferences-form">
+        <label class="toggle-line"><input type="checkbox" id="pref-email-enabled"> <span>Email-уведомления включены</span></label>
+        <label class="toggle-line"><input type="checkbox" id="pref-sms-enabled"> <span>SMS-уведомления включены</span></label>
+        <label class="toggle-line"><input type="checkbox" id="pref-booking-email-enabled"> <span>Дублировать бронирования на email</span></label>
+        <label class="toggle-line"><input type="checkbox" id="pref-booking-sms-enabled"> <span>Дублировать бронирования по SMS</span></label>
+      </div>
+      <p class="success-text hidden" id="notifications-preferences-message"></p>
+      <p class="error-text hidden" id="notifications-preferences-error"></p>
+    </article>
+
+    <article class="card">
+      <div class="card-heading-row">
+        <div>
+          <span class="section-kicker">Журнал доставки</span>
+          <h2>Email / SMS отправки</h2>
+        </div>
+        <p class="muted-block" id="notifications-delivery-caption">Последние 30 попыток отправки.</p>
+      </div>
+      <div class="page-stack top-gap" id="notifications-delivery-list"></div>
+      <p class="muted-block hidden" id="notifications-delivery-empty">Пока внешних отправок нет.</p>
+    </article>
+  </section>
+</section>
+{% endblock %}

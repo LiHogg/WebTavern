@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — заведения{% endblock %}
+{% block page_id %}venues{% endblock %}
+{% block content %}
+<section class="page-stack">
+  <section class="hero hero-compact">
+    <span class="section-kicker">Каталог заведений</span>
+    <h1>Откройте страницу заведения и посмотрите схему зала</h1>
+    <p class="hero-text">Каталог теперь умеет фильтровать заведения по городу, району, кухне, ценовой категории и теме, а также искать места рядом по координатам.</p>
+  </section>
+
+  <section class="card">
+    <div class="section-topline"><span class="section-kicker">Подбор</span><h2>Поиск и фильтры</h2></div>
+    <div class="toolbar-row venue-catalog-toolbar top-gap">
+      <label class="field venue-search-field">
+        <span>Поиск</span>
+        <input type="search" id="venues-search" placeholder="Название, город, адрес">
+      </label>
+      <label class="field selector-field">
+        <span>Город</span>
+        <select id="venues-city-filter">
+          <option value="">Все города</option>
+        </select>
+      </label>
+      <label class="field selector-field">
+        <span>Район</span>
+        <select id="venues-district-filter">
+          <option value="">Все районы</option>
+        </select>
+      </label>
+      <label class="field selector-field">
+        <span>Кухня</span>
+        <input type="search" id="venues-cuisine-filter" list="venues-cuisine-options" placeholder="Например, итальянская">
+        <datalist id="venues-cuisine-options"></datalist>
+      </label>
+      <label class="field selector-field">
+        <span>Ценовая категория</span>
+        <select id="venues-price-filter">
+          <option value="">Любая</option>
+          <option value="budget">Доступно</option>
+          <option value="middle">Средний чек</option>
+          <option value="high">Выше среднего</option>
+          <option value="premium">Премиум</option>
+        </select>
+      </label>
+      <label class="field selector-field">
+        <span>Тема</span>
+        <select id="venues-theme-filter">
+          <option value="">Любая</option>
+          <option value="family">Семейное</option>
+          <option value="romantic">Романтика</option>
+          <option value="business">Деловое</option>
+          <option value="geek">Гик / настолки</option>
+          <option value="panoramic">Панорамное</option>
+          <option value="ethnic">Этническое</option>
+          <option value="art">Арт-пространство</option>
+          <option value="lounge">Lounge</option>
+          <option value="live_music">Живая музыка</option>
+          <option value="fast_casual">Fast casual</option>
+        </select>
+      </label>
+      <label class="field selector-field">
+        <span>Подтверждение</span>
+        <select id="venues-confirmation-filter">
+          <option value="">Любое</option>
+          <option value="auto">Автоматическое</option>
+          <option value="manager">Менеджером</option>
+        </select>
+      </label>
+      <label class="field selector-field">
+        <span>Компания</span>
+        <select id="venues-guests-filter">
+          <option value="">Любая</option>
+          <option value="2">от 2 гостей</option>
+          <option value="4">от 4 гостей</option>
+          <option value="6">от 6 гостей</option>
+          <option value="8">от 8 гостей</option>
+          <option value="10">от 10 гостей</option>
+        </select>
+      </label>
+      <label class="field selector-field">
+        <span>Сортировка</span>
+        <select id="venues-sort-filter">
+          <option value="name">По названию</option>
+          <option value="rating">По рейтингу</option>
+          <option value="capacity">По вместимости</option>
+          <option value="distance">По расстоянию</option>
+        </select>
+      </label>
+      <label class="field selector-field">
+        <span>Радиус рядом</span>
+        <select id="venues-radius-filter">
+          <option value="5">5 км</option>
+          <option value="10">10 км</option>
+          <option value="20" selected>20 км</option>
+          <option value="50">50 км</option>
+        </select>
+      </label>
+
+    </div>
+    <div class="button-row top-gap catalog-view-row">
+      <button class="button button-primary" type="button" id="venues-view-list">Список</button>
+      <button class="button button-secondary" type="button" id="venues-open-map">Карта</button>
+      <button class="button button-secondary" type="button" id="venues-detect-city">Определить мой город</button>
+      <button class="button button-secondary" type="button" id="venues-nearby-button">Искать рядом со мной</button>
+      <button class="button button-secondary hidden" type="button" id="venues-nearby-clear">Сбросить поиск рядом</button>
+    </div>
+    <p class="muted-block hidden" id="venues-location-note"></p>
+    <p class="muted-block" id="venues-summary">Загрузка каталога…</p>
+  </section>
+
+  <section class="card" id="venues-loading">Загрузка заведений…</section>
+  <section class="card error-card hidden" id="venues-error"></section>
+  <section class="grid grid-three hidden" id="venues-grid"></section>
+  <section class="card hidden" id="venues-empty">По вашим параметрам ничего не найдено.</section>
+
+  <section class="card catalog-map-panel hidden" id="venues-map-modal" aria-labelledby="venues-map-title">
+    <div class="catalog-map-header">
+      <div>
+        <span class="section-kicker">Карта партнёров</span>
+        <h2 id="venues-map-title">Заведения на карте</h2>
+        <p class="muted-block">Карта учитывает выбранные фильтры каталога. При наличии API-ключа используется Яндекс/Google Maps, а без ключа остаётся локальный режим.</p>
+      </div>
+      <div class="button-row compact-row">
+        <button class="button button-secondary" type="button" id="venues-map-locate">Показать меня на карте</button>
+        <button class="button button-secondary" type="button" id="venues-map-close">Вернуться к списку</button>
+      </div>
+    </div>
+    <div class="venue-map-layout">
+      <div class="venue-map-canvas" id="venues-map-canvas" aria-label="Карта заведений"></div>
+      <aside class="venue-map-sidebar">
+        <div class="definition-list" id="venues-map-stats"></div>
+        <div class="venue-map-selected" id="venues-map-selected"></div>
+        <div class="venue-map-list" id="venues-map-list"></div>
+      </aside>
+    </div>
+  </section>
+</section>
+{% endblock %}

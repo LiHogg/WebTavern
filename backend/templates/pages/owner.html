@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — кабинет владельца{% endblock %}
+{% block page_id %}owner{% endblock %}
+{% block content %}
+<section class="page-stack">
+  <section class="card">
+    <span class="section-kicker">Кабинет владельца</span>
+    <h1>Мои заведения</h1>
+    <p>Теперь добавление заведения встроено прямо в кабинет владельца: здесь можно создать черновик, посмотреть свои площадки и отправить их на модерацию.</p>
+  </section>
+
+  <section class="card" id="owner-auth-warning">Проверяем доступ владельца…</section>
+  <section class="card error-card hidden" id="owner-error"></section>
+
+  <section class="grid grid-two owner-grid-top hidden" id="owner-dashboard">
+    <article class="card compact-card">
+      <div class="section-topline">
+        <span class="section-kicker">Добавление заведения</span>
+        <h2>Создать новое заведение</h2>
+      </div>
+      <form class="form" id="owner-venue-form">
+        <label class="field"><span>Название</span><input name="name" required></label>
+        <div class="grid grid-two">
+          <label class="field"><span>Страна</span><input name="country" value="Россия" required></label>
+          <label class="field"><span>Город</span><input name="city" required></label>
+        </div>
+        <div class="grid grid-two">
+          <label class="field"><span>Район</span><input name="district"></label>
+          <label class="field"><span>Адрес</span><input name="address" required></label>
+        </div>
+        <div class="grid grid-two">
+          <label class="field"><span>Кухня</span><input name="cuisine"></label>
+          <label class="field"><span>Ценовая категория</span><select name="price_category"><option value="budget">Доступно</option><option value="middle" selected>Средний чек</option><option value="high">Выше среднего</option><option value="premium">Премиум</option></select></label>
+        </div>
+        <label class="field"><span>Тема кафе</span><select name="venue_theme"><option value="family">Семейное</option><option value="romantic">Романтика</option><option value="business">Деловое</option><option value="geek">Гик / настолки</option><option value="panoramic">Панорамное</option><option value="ethnic">Этническое</option><option value="art">Арт-пространство</option><option value="lounge">Lounge</option><option value="live_music">Живая музыка</option><option value="fast_casual">Fast casual</option></select></label>
+        <label class="field"><span>Краткое описание</span><input name="short_description"></label>
+        <label class="field"><span>Полное описание</span><textarea name="description" rows="5"></textarea></label>
+        <button class="button button-primary" type="submit" id="owner-venue-submit">Создать черновик</button>
+      </form>
+      <p class="success-text top-gap hidden" id="owner-venue-message"></p>
+      <p class="error-text top-gap hidden" id="owner-venue-form-error"></p>
+    </article>
+
+    <article class="card compact-card">
+      <div class="section-topline">
+        <span class="section-kicker">Сводка</span>
+        <h2>Состояние кабинета</h2>
+      <p class="muted-block">Редактирование заведения и схема залов теперь открываются внутри карточки конкретного заведения.</p>
+      </div>
+      <div class="definition-list top-gap" id="owner-summary">
+        <div><span>Черновики</span><strong>0</strong></div>
+        <div><span>На модерации</span><strong>0</strong></div>
+        <div><span>Опубликовано</span><strong>0</strong></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="card hidden" id="owner-analytics-card">
+    <div class="card-heading-row">
+      <div><span class="section-kicker">Аналитика</span><h2>Снимок по всем моим заведениям</h2></div>
+      <p class="muted-block" id="owner-analytics-caption">Загрузка аналитики...</p>
+    </div>
+    <div class="definition-list top-gap" id="owner-analytics-summary"></div>
+    <div class="page-stack top-gap" id="owner-analytics-reviews"></div>
+  </section>
+
+  <section class="card hidden" id="owner-venues-card">
+    <div class="section-topline">
+      <span class="section-kicker">Список заведений</span>
+      <h2>Все площадки владельца</h2>
+    </div>
+    <div class="grid grid-three" id="owner-venues"></div>
+  </section>
+</section>
+{% endblock %}

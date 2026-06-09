@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/frontend/Dockerfile
+    env_file:
+      - ../../.env
+    restart: always
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/backend/Dockerfile
+    working_dir: /app/backend
+    env_file:
+      - ../../.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+
+  celery:
+    build:
+      context: ../..
+      dockerfile: infra/docker/backend/Dockerfile
+    working_dir: /app/backend
+    env_file:
+      - ../../.env
+    command: celery -A config worker -l info
+    restart: always
+    depends_on:
+      - backend
+      - redis
+
+  celery-beat:
+    build:
+      context: ../..
+      dockerfile: infra/docker/backend/Dockerfile
+    working_dir: /app/backend
+    env_file:
+      - ../../.env
+    command: celery -A config beat -l info
+    restart: always
+    depends_on:
+      - backend
+      - redis
+
+  postgres:
+    image: postgres:16-alpine
+    env_file:
+      - ../../.env
+    volumes:
+      - postgres_data_production:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+  nginx:
+    image: nginx:stable-alpine
+    depends_on:
+      - frontend
+      - backend
+    volumes:
+      - ../docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    restart: always
+
+volumes:
+  postgres_data_production:

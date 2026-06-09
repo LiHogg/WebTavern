@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Документы — WebTavern{% endblock %}
+{% block page_id %}legal{% endblock %}
+{% block content %}
+<section class="page-stack legal-page-shell">
+  <section class="hero legal-hero">
+    <span class="section-kicker">WebTavern</span>
+    <h1>Документы и правила платформы</h1>
+    <p class="hero-text">Здесь собраны основные страницы с условиями использования сервиса, обработкой персональных данных, правилами бронирования и информацией для владельцев заведений.</p>
+  </section>
+
+  <section class="grid grid-three legal-docs-grid">
+    <a class="card legal-doc-link" href="/legal/privacy/">
+      <span class="section-kicker">Данные</span>
+      <h2>Политика конфиденциальности</h2>
+      <p>Какие данные собирает платформа, зачем они нужны и как пользователь может управлять ими.</p>
+    </a>
+    <a class="card legal-doc-link" href="/legal/terms/">
+      <span class="section-kicker">Сервис</span>
+      <h2>Пользовательское соглашение</h2>
+      <p>Основные условия использования WebTavern клиентами, владельцами и менеджерами заведений.</p>
+    </a>
+    <a class="card legal-doc-link" href="/legal/personal-data/">
+      <span class="section-kicker">Согласие</span>
+      <h2>Обработка персональных данных</h2>
+      <p>Согласие на обработку данных при регистрации, бронировании, уведомлениях и обращениях.</p>
+    </a>
+    <a class="card legal-doc-link" href="/legal/booking-rules/">
+      <span class="section-kicker">Бронь</span>
+      <h2>Правила бронирования</h2>
+      <p>Как создаётся бронь, что значит резерв стола, когда бронь подтверждается и как работает отмена.</p>
+    </a>
+    <a class="card legal-doc-link" href="/legal/partner-rules/">
+      <span class="section-kicker">Партнёрам</span>
+      <h2>Правила для заведений</h2>
+      <p>Условия размещения карточек заведений, модерации, управления залами, столами и менеджерами.</p>
+    </a>
+    <a class="card legal-doc-link" href="/legal/contacts/">
+      <span class="section-kicker">Контакты</span>
+      <h2>Правовая информация</h2>
+      <p>Контакты для обращений, порядок рассмотрения запросов и сведения о демонстрационном статусе проекта.</p>
+    </a>
+  </section>
+
+  <section class="card legal-note-card">
+    <h2>Важно</h2>
+    <p>Тексты подготовлены для учебного демонстрационного проекта WebTavern. Перед коммерческим запуском реквизиты, контакты, порядок оплаты, возвратов и юридические формулировки необходимо проверить и адаптировать под фактического оператора платформы.</p>
+  </section>
+</section>
+{% endblock %}

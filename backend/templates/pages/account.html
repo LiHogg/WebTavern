@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — профиль{% endblock %}
+{% block page_id %}account{% endblock %}
+{% block content %}
+<section class="page-stack narrow-page">
+  <section class="card">
+    <span class="section-kicker">Личный кабинет</span>
+    <h1>Профиль пользователя</h1>
+    <p class="hero-text">После входа или регистрации пользователь попадает сюда. На этой странице можно изменить основные данные профиля.</p>
+  </section>
+
+  <section class="card" id="account-loading">Загружаем профиль...</section>
+
+  <section class="card error-card hidden" id="account-error-card">
+    <p id="account-error-text"></p>
+    <div class="button-row top-gap">
+      <a class="button button-primary" href="/login/">Войти</a>
+      <a class="button button-secondary" href="/register/">Регистрация</a>
+    </div>
+  </section>
+
+  <section class="hidden" id="account-card">
+    <div class="grid grid-two">
+      <article class="card">
+        <h2>Основные данные</h2>
+        <div class="definition-list" id="account-details"></div>
+        <div class="button-row top-gap" id="account-actions"></div>
+        <p class="muted-block top-gap">Аккаунт может работать сразу в нескольких режимах. Например, менеджер или владелец также может пользоваться клиентским сценарием: искать заведения и бронировать столы как обычный гость. После отправки бронь сразу резервирует стол на выбранный слот.</p>
+      </article>
+
+      <article class="card">
+        <h2>Редактирование профиля</h2>
+        <form class="form" id="account-form" novalidate>
+          <div class="grid grid-two">
+            <label class="field">
+              <span>Фамилия</span>
+              <input name="last_name" id="account-last-name" required>
+            </label>
+            <label class="field">
+              <span>Имя</span>
+              <input name="first_name" id="account-first-name" required>
+            </label>
+          </div>
+
+          <div class="grid grid-two">
+            <label class="field">
+              <span>Отчество</span>
+              <input name="middle_name" id="account-middle-name">
+            </label>
+            <label class="field">
+              <span>Дата рождения</span>
+              <input name="date_of_birth" id="account-date-of-birth" type="date" required>
+            </label>
+          </div>
+
+          <div class="grid grid-two">
+            <label class="field">
+              <span>Email</span>
+              <input name="email" id="account-email" type="text" inputmode="email" required>
+            </label>
+            <label class="field">
+              <span>Телефон</span>
+              <input name="phone" id="account-phone" placeholder="+7 (999) 999-99-99" required>
+            </label>
+          </div>
+
+          <div class="grid grid-two">
+            <label class="field">
+              <span>Город проживания</span>
+              <input name="city" id="account-city" placeholder="Например, Москва">
+            </label>
+            <div class="field field-action-group">
+              <span>Автоопределение</span>
+              <div class="button-row">
+                <button class="button button-secondary" type="button" id="account-detect-city">Определить город</button>
+              </div>
+              <p class="muted-block hidden" id="account-city-hint"></p>
+            </div>
+          </div>
+
+          <p class="muted-block">Роль и тип аккаунта меняются только администратором системы.</p>
+          <button class="button button-primary" type="submit" id="account-save">Сохранить изменения</button>
+        </form>
+
+        <p class="success-text top-gap hidden" id="account-success"></p>
+        <p class="error-text top-gap pre-line hidden" id="account-form-error"></p>
+      </article>
+    </div>
+
+    <article class="card top-gap">
+      <div class="card-heading-row">
+        <div>
+          <span class="section-kicker">Мои визиты</span>
+          <h2>Актуальные и прошлые брони</h2>
+        </div>
+        <button class="button button-secondary" type="button" id="account-bookings-refresh">Обновить список</button>
+      </div>
+      <p class="hero-text">Здесь клиент видит будущие и текущие брони, а ниже — завершённые, отменённые и уже прошедшие посещения.</p>
+      <div class="compact-definition-list top-gap" id="account-bookings-summary"></div>
+      <p class="success-text top-gap hidden" id="account-bookings-message"></p>
+      <p class="error-text top-gap pre-line hidden" id="account-bookings-error"></p>
+
+      <div class="top-gap">
+        <h3 class="subcard-title">Актуальные брони</h3>
+        <div class="page-stack top-gap" id="account-active-bookings"></div>
+      </div>
+
+      <div class="top-gap">
+        <h3 class="subcard-title">Прошлые брони</h3>
+        <div class="page-stack top-gap" id="account-past-bookings"></div>
+      </div>
+    </article>
+  
+
+    <article class="card top-gap">
+      <div class="card-heading-row">
+        <div><span class="section-kicker">Оплаты</span><h2>История оплат и статусы</h2></div>
+        <button class="button button-secondary" type="button" id="account-payments-refresh">Обновить оплаты</button>
+      </div>
+      <div class="compact-definition-list top-gap" id="account-payments-summary"></div>
+      <p class="error-text hidden top-gap" id="account-payments-error"></p>
+      <div class="page-stack top-gap" id="account-payments-list"></div>
+    </article>
+
+    <article class="card top-gap">
+      <div class="card-heading-row">
+        <div><span class="section-kicker">Отзывы</span><h2>Заведения, где вы уже были</h2></div>
+        <a class="button button-secondary" href="/venues/">Найти заведение</a>
+      </div>
+      <div class="page-stack top-gap" id="account-review-candidates"></div>
+      <p class="muted-block hidden" id="account-review-candidates-empty">Сейчас нет новых заведений, по которым можно оставить отзыв.</p>
+    </article>
+
+    <article class="card top-gap">
+      <div class="card-heading-row">
+        <div><span class="section-kicker">Уведомления</span><h2>Последние события</h2></div>
+        <button class="button button-secondary" type="button" id="account-notifications-read-all">Отметить всё прочитанным</button>
+        <a class="button button-secondary" href="/notifications/">Все уведомления</a>
+      </div>
+      <div class="page-stack top-gap" id="account-notifications-list"></div>
+      <p class="muted-block hidden" id="account-notifications-empty">Пока уведомлений нет.</p>
+    </article>
+
+</section>
+</section>
+{% endblock %}

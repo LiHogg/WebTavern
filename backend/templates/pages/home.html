@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — главная{% endblock %}
+{% block page_id %}home{% endblock %}
+{% block content %}
+<section class="page-stack home-page-shell">
+  <section class="hero hero-home hero-showcase">
+    <div class="hero-copy">
+      <span class="section-kicker">WebTavern</span>
+      <h1>Бронируйте стол по реальной схеме зала, а не вслепую</h1>
+      <p class="hero-text">
+        Найдите город, откройте схему зала, выберите свободный стол и оформите бронь без звонков.
+      </p>
+      <form class="home-search-panel" id="home-search-form">
+        <label class="field"><span>Город или заведение</span><input type="search" id="home-search-query" placeholder="Например: Москва, City Cafe, джаз"></label>
+        <button class="button button-primary" type="submit">Найти стол</button>
+      </form>
+      <div class="button-row">
+        <a class="button button-secondary" href="/venues/">Открыть каталог</a>
+        <a class="button button-secondary" href="/venues/#catalog-map">Открыть карту</a>
+        <a class="button button-secondary" href="/register/" id="home-register-cta">Создать аккаунт</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid grid-three home-steps-grid">
+    <article class="card compact-card"><span class="section-kicker">Шаг 1</span><h3>Выберите заведение</h3><p class="muted-block">Фильтруйте каталог по городу, району, кухне, рейтингу и вместимости.</p></article>
+    <article class="card compact-card"><span class="section-kicker">Шаг 2</span><h3>Посмотрите схему</h3><p class="muted-block">На странице заведения видно зал, столы, фотографии и занятость на выбранный интервал.</p></article>
+    <article class="card compact-card"><span class="section-kicker">Шаг 3</span><h3>Забронируйте стол</h3><p class="muted-block">Сервис отправит уведомления клиенту, владельцу или менеджеру заведения.</p></article>
+  </section>
+
+  <section class="card">
+    <div class="card-heading-row">
+      <div>
+        <span class="section-kicker">Подборки</span>
+        <h2>Топ заведений</h2>
+      </div>
+      <a class="button button-secondary" href="/venues/">Смотреть весь каталог</a>
+    </div>
+    <div class="grid grid-three top-gap" id="home-top-rated"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-heading-row">
+      <div>
+        <span class="section-kicker">Популярное</span>
+        <h2>Чаще всего бронируют</h2>
+      </div>
+      <p class="muted-block">Список формируется по демо-истории бронирований.</p>
+    </div>
+    <div class="grid grid-three top-gap" id="home-popular"></div>
+  </section>
+
+  <section class="grid grid-two home-feedback-grid">
+    <article class="card">
+      <div class="section-topline">
+        <span class="section-kicker">Отзывы</span>
+        <h2>Последние впечатления гостей</h2>
+      </div>
+      <div class="page-stack top-gap" id="home-recent-reviews"></div>
+    </article>
+
+    <article class="card">
+      <div class="section-topline">
+        <span class="section-kicker">После посещения</span>
+        <h2>Оставьте отзыв о заведении, где уже были</h2>
+      </div>
+      <p class="hero-text">Этот блок показывается для авторизованного клиента и предлагает заведения, по которым ещё не оставлен отзыв. Бронь через сайт для этого не обязательна.</p>
+      <div class="page-stack top-gap" id="home-review-candidates"></div>
+      <p class="muted-block hidden" id="home-review-candidates-empty">Здесь появятся заведения, по которым можно оставить отзыв после регистрации.</p>
+      <div class="button-row top-gap">
+        <a class="button button-secondary" href="/account/">Открыть профиль</a>
+      </div>
+    </article>
+  </section>
+
+  <section class="card hidden" id="home-error-card"></section>
+</section>
+{% endblock %}

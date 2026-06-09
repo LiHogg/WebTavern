@@ -1,0 +1,13 @@
+Django
+djangorestframework
+django-cors-headers
+channels
+channels-redis
+daphne
+psycopg2-binary
+celery
+redis
+Pillow
+python-dotenv
+yookassa
+whitenoise

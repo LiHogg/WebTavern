@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} — WebTavern{% endblock %}
+{% block page_id %}legal{% endblock %}
+{% block content %}
+<section class="page-stack legal-page-shell">
+  <section class="hero legal-hero">
+    <span class="section-kicker">Правовая информация</span>
+    <h1>{{ title }}</h1>
+    <p class="hero-text">{{ lead }}</p>
+    <div class="button-row top-gap">
+      <a class="button button-secondary" href="/legal/">Все документы</a>
+      <a class="button button-secondary" href="/">На главную</a>
+    </div>
+  </section>
+
+  <section class="card legal-document-card">
+    {{ content|safe }}
+  </section>
+</section>
+{% endblock %}

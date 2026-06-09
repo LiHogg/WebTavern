@@ -1,0 +1,478 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — редактирование заведения{% endblock %}
+{% block page_id %}venue-manage{% endblock %}
+{% block manage_venue_slug %}{{ slug }}{% endblock %}
+{% block content %}
+<section class="page-stack">
+  <section class="card">
+    <span class="section-kicker">Редактирование заведения</span>
+    <h1 id="venue-manage-title">Загрузка данных заведения…</h1>
+    <p id="venue-manage-subtitle">На этой странице можно редактировать основные данные площадки, управлять залами и собирать схему размещения столов прямо внутри карточки заведения.</p>
+  </section>
+
+  <section class="card" id="venue-manage-auth-warning">Проверяем доступ к заведению…</section>
+  <section class="card error-card hidden" id="venue-manage-error"></section>
+
+  <section class="page-stack hidden" id="venue-manage-dashboard">
+    <details class="card accordion-card" open>
+      <summary class="accordion-summary">
+        <div>
+          <span class="section-kicker">Основные данные</span>
+          <h2>Параметры заведения</h2>
+        </div>
+        <span class="accordion-indicator" aria-hidden="true"></span>
+      </summary>
+      <div class="accordion-content">
+        <section class="grid grid-two owner-grid-top">
+          <article class="compact-card">
+            <form class="form" id="venue-manage-form">
+              <label class="field"><span>Название</span><input name="name" required></label>
+              <div class="grid grid-two">
+                <label class="field"><span>Страна</span><input name="country" required></label>
+                <label class="field"><span>Город</span><input name="city" required></label>
+              </div>
+              <div class="grid grid-two">
+                <label class="field"><span>Район</span><input name="district"></label>
+                <label class="field"><span>Адрес</span><input name="address" required></label>
+              </div>
+              <div class="grid grid-two">
+                <label class="field"><span>Широта (lat)</span><input name="latitude" type="number" step="0.000001"></label>
+                <label class="field"><span>Долгота (lng)</span><input name="longitude" type="number" step="0.000001"></label>
+              </div>
+              <div class="button-row top-gap">
+                <button class="button button-secondary" type="button" id="venue-manage-fill-coordinates">Взять мои координаты</button>
+              </div>
+              <div class="grid grid-two">
+                <label class="field"><span>Кухня</span><input name="cuisine" placeholder="Европейская, паназиатская…"></label>
+                <label class="field"><span>Ценовая категория</span>
+                  <select name="price_category">
+                    <option value="budget">Доступно</option>
+                    <option value="middle">Средний чек</option>
+                    <option value="high">Выше среднего</option>
+                    <option value="premium">Премиум</option>
+                  </select>
+                </label>
+              </div>
+              <label class="field"><span>Тема кафе</span>
+                <select name="venue_theme">
+                  <option value="family">Семейное</option>
+                  <option value="romantic">Романтика</option>
+                  <option value="business">Деловое</option>
+                  <option value="geek">Гик / настолки</option>
+                  <option value="panoramic">Панорамное</option>
+                  <option value="ethnic">Этническое</option>
+                  <option value="art">Арт-пространство</option>
+                  <option value="lounge">Lounge</option>
+                  <option value="live_music">Живая музыка</option>
+                  <option value="fast_casual">Fast casual</option>
+                </select>
+              </label>
+              <label class="field"><span>Краткое описание</span><input name="short_description"></label>
+              <label class="field"><span>Полное описание</span><textarea name="description" rows="5"></textarea></label>
+              <div class="button-row">
+                <button class="button button-primary" type="submit" id="venue-manage-submit">Сохранить изменения</button>
+                <button class="button button-secondary" type="button" id="venue-manage-submit-moderation">Отправить на модерацию</button>
+              </div>
+            </form>
+            <p class="success-text hidden" id="venue-manage-message"></p>
+            <p class="error-text hidden" id="venue-manage-form-error"></p>
+          </article>
+
+          <article class="compact-card">
+            <div class="section-topline">
+              <span class="section-kicker">Состояние</span>
+              <h2>Статус и переходы</h2>
+            </div>
+            <div class="definition-list" id="venue-manage-summary">
+              <div><span>Статус</span><strong>—</strong></div>
+              <div><span>Публикация</span><strong>—</strong></div>
+              <div><span>Схема залов</span><strong>Редактируется ниже</strong></div>
+            </div>
+            <div class="button-row top-gap">
+              <a class="button button-secondary" href="/owner/" id="venue-manage-owner-link">К кабинету владельца</a>
+              <a class="button button-secondary hidden" href="/manager/" id="venue-manage-manager-link">К кабинету менеджера</a>
+              <a class="button button-secondary" href="#venue-layout-accordion">К схеме залов</a>
+            </div>
+          </article>
+        </section>
+      </div>
+    </details>
+
+
+    <details class="card accordion-card" id="venue-managers-accordion">
+      <summary class="accordion-summary">
+        <div>
+          <span class="section-kicker">Команда</span>
+          <h2>Менеджеры заведения</h2>
+        </div>
+        <span class="accordion-indicator" aria-hidden="true"></span>
+      </summary>
+      <div class="accordion-content">
+        <p class="muted-block">Владелец может выдать доступ зарегистрированному пользователю по email. Менеджер увидит это заведение в своём кабинете и сможет работать с бронями, схемой и фотографиями.</p>
+        <form class="form top-gap" id="venue-managers-form">
+          <div class="grid grid-two">
+            <label class="field"><span>Email менеджера</span><input type="email" name="email" placeholder="manager@example.com" required></label>
+            <div class="field read-only-field"><span>Доступ</span><div class="booking-interval-preview">Только к этому заведению</div></div>
+          </div>
+          <div class="button-row">
+            <button class="button button-primary" type="submit" id="venue-managers-submit">Добавить менеджера</button>
+          </div>
+        </form>
+        <p class="success-text hidden" id="venue-managers-message"></p>
+        <p class="error-text hidden" id="venue-managers-error"></p>
+        <div class="manager-assignment-list top-gap" id="venue-managers-list"></div>
+        <p class="muted-block hidden" id="venue-managers-empty">Менеджеры пока не назначены.</p>
+      </div>
+    </details>
+
+    <details class="card accordion-card" id="venue-booking-rules-accordion">
+      <summary class="accordion-summary">
+        <div>
+          <span class="section-kicker">Бронирование</span>
+          <h2>Правила посещения и разрешения</h2>
+        </div>
+        <span class="accordion-indicator" aria-hidden="true"></span>
+      </summary>
+      <div class="accordion-content">
+        <p class="muted-block">Владелец может менять правила бронирования: нужна ли ручная проверка менеджером, можно ли указывать примерное время, разрешать объединение столов или подсадку к уже занятым зонам, а также настраивать длительность, буфер и предоплату.</p>
+        <div class="muted-block hidden" id="venue-booking-rules-readonly">Для менеджера этот раздел открыт только для просмотра. Изменять правила бронирования может владелец заведения.</div>
+        <form class="form top-gap" id="venue-booking-rules-form">
+          <div class="grid grid-two">
+            <label class="field compact-field"><span>Базовая длительность, мин.</span><input type="number" name="default_duration_minutes" min="10" step="10" required></label>
+            <label class="field compact-field"><span>Шаг временных слотов, мин.</span><input type="number" name="slot_step_minutes" min="5" step="5" required></label>
+            <label class="field compact-field"><span>Буфер уборки, мин.</span><input type="number" name="cleanup_buffer_minutes" min="0" step="5" required></label>
+            <label class="field compact-field"><span>Холд оплаты, мин.</span><input type="number" name="payment_hold_minutes" min="0" step="5" required></label>
+            <label class="field compact-field"><span>Минимум до начала брони, мин.</span><input type="number" name="min_booking_notice_minutes" min="0" step="5" required></label>
+            <label class="field compact-field"><span>Отмена без штрафа до начала, мин.</span><input type="number" name="free_cancellation_before_minutes" min="0" step="5" required></label>
+            <label class="field compact-field"><span>Неявка через, мин. после начала</span><input type="number" name="no_show_after_minutes" min="0" step="5" required></label>
+            <label class="field compact-field"><span>Подтверждение брони</span>
+              <select name="requires_manager_confirmation">
+                <option value="true">Менеджером</option>
+                <option value="false">Автоматически</option>
+              </select>
+            </label>
+            <label class="field compact-field"><span>Разрешить примерное время</span>
+              <select name="allow_client_approximate_time">
+                <option value="true">Да</option>
+                <option value="false">Нет</option>
+              </select>
+            </label>
+            <label class="field compact-field"><span>Разрешить объединение столов</span>
+              <select name="allow_table_combination">
+                <option value="true">Да</option>
+                <option value="false">Нет</option>
+              </select>
+            </label>
+            <label class="field compact-field"><span>Разрешить подсадку гостей</span>
+              <select name="allow_shared_seating">
+                <option value="true">Да</option>
+                <option value="false">Нет</option>
+              </select>
+            </label>
+            <label class="field compact-field"><span>Разрешить перенос брони менеджером</span>
+              <select name="allow_manager_reschedule">
+                <option value="true">Да</option>
+                <option value="false">Нет</option>
+              </select>
+            </label>
+            <label class="field compact-field"><span>Предоплата</span><input type="number" name="deposit_amount" min="0" step="0.01"></label>
+            <label class="field compact-field"><span>Валюта</span>
+              <select name="deposit_currency">
+                <option value="RUB">RUB</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="button button-primary" type="submit" id="venue-booking-rules-submit">Сохранить правила</button>
+          </div>
+        </form>
+        <p class="success-text hidden" id="venue-booking-rules-message"></p>
+        <p class="error-text hidden" id="venue-booking-rules-error"></p>
+      </div>
+    </details>
+
+
+    <details class="card accordion-card" id="venue-pricing-accordion">
+      <summary class="accordion-summary">
+        <div>
+          <span class="section-kicker">Акции</span>
+          <h2>Стоимость бронирования</h2>
+        </div>
+        <span class="accordion-indicator" aria-hidden="true"></span>
+      </summary>
+      <div class="accordion-content">
+        <p class="muted-block">Этот блок необязательный. Владелец может задать стоимость брони целого зала или отдельную цену для разного количества выбранных столов: например 1 стол — 600 ₽, 2 стола — 1100 ₽.</p>
+        <div class="muted-block hidden" id="venue-pricing-readonly">Для менеджера этот раздел открыт только для просмотра. Настраивать акции может владелец заведения.</div>
+        <form class="form top-gap" id="venue-pricing-form">
+          <div class="grid grid-two">
+            <label class="field compact-field"><span>Тип акции</span>
+              <select name="rule_type" id="venue-pricing-rule-type">
+                <option value="table_count">Цена по количеству столов</option>
+                <option value="whole_hall">Бронь целого зала</option>
+              </select>
+            </label>
+            <label class="field compact-field"><span>Название</span><input name="title" placeholder="Например: 2 стола выгоднее"></label>
+            <label class="field compact-field" id="venue-pricing-table-count-field"><span>Количество столов</span><input type="number" name="table_count" min="1" step="1" value="1"></label>
+            <label class="field compact-field" id="venue-pricing-hall-field"><span>Зал</span><select name="hall" id="venue-pricing-hall-select"></select></label>
+            <label class="field compact-field"><span>Стоимость</span><input type="number" name="price_amount" min="0" step="0.01" required></label>
+            <label class="field compact-field"><span>Валюта</span>
+              <select name="price_currency">
+                <option value="RUB">RUB</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </label>
+          </div>
+          <label class="field top-gap"><span>Описание</span><textarea name="description" rows="3" placeholder="Необязательное пояснение условия"></textarea></label>
+          <label class="checkbox-row top-gap"><input type="checkbox" name="is_active" checked><span>Акция активна и применяется при бронировании</span></label>
+          <div class="button-row top-gap">
+            <button class="button button-primary" type="submit" id="venue-pricing-submit">Добавить правило стоимости</button>
+          </div>
+        </form>
+        <p class="success-text hidden" id="venue-pricing-message"></p>
+        <p class="error-text hidden" id="venue-pricing-error"></p>
+        <div class="manager-assignment-list top-gap" id="venue-pricing-list"></div>
+        <p class="muted-block hidden" id="venue-pricing-empty">Акции и отдельные правила стоимости пока не настроены. Бронь будет работать без обязательной стоимости, если не задана обычная предоплата.</p>
+      </div>
+    </details>
+
+
+
+
+    <details class="card accordion-card" id="venue-images-accordion">
+      <summary class="accordion-summary">
+        <div>
+          <span class="section-kicker">Фотографии</span>
+          <h2>Галерея заведения</h2>
+        </div>
+        <span class="accordion-indicator" aria-hidden="true"></span>
+      </summary>
+      <div class="accordion-content">
+        <p class="muted-block">Добавьте фотографии интерьера, залов, фасада или атмосферы. Эти изображения появятся на клиентской странице заведения.</p>
+        <form class="form top-gap" id="venue-images-form" enctype="multipart/form-data" onsubmit="return false;">
+          <div class="grid grid-two">
+            <label class="field">
+              <span>Фотографии</span>
+              <input type="file" name="images" accept="image/*" multiple required>
+            </label>
+            <label class="field">
+              <span>Описание для alt</span>
+              <input name="alt_text" placeholder="Например: основной зал WebTavern">
+            </label>
+          </div>
+          <label class="checkbox-row top-gap">
+            <input type="checkbox" name="is_cover" id="venue-images-cover">
+            <span>Сделать первое выбранное фото обложкой</span>
+          </label>
+          <div class="button-row">
+            <button class="button button-primary" type="button" id="venue-images-submit">Загрузить фотографии</button>
+          </div>
+        </form>
+        <p class="success-text hidden" id="venue-images-message"></p>
+        <p class="error-text hidden" id="venue-images-error"></p>
+        <div class="manage-image-grid top-gap" id="venue-images-list"></div>
+        <p class="muted-block hidden" id="venue-images-empty">Фотографии ещё не добавлены.</p>
+      </div>
+    </details>
+
+    <details class="card accordion-card" id="venue-branding-accordion">
+      <summary class="accordion-summary">
+        <div>
+          <span class="section-kicker">Оформление страницы</span>
+          <h2>Тема и палитра блоков</h2>
+        </div>
+        <span class="accordion-indicator" aria-hidden="true"></span>
+      </summary>
+      <div class="accordion-content">
+        <p class="muted-block">Владелец может выбрать готовую тему или собрать свои цвета вручную. Перед сохранением палитра проверяется на контраст, чтобы текст оставался читаемым.</p>
+        <form class="form top-gap" id="venue-branding-form">
+          <div class="grid grid-two">
+            <label class="field"><span>Готовая тема</span>
+              <select name="theme_preset">
+                <option value="northern_blue">Northern blue</option>
+                <option value="brick_house">Brick house</option>
+                <option value="sage_garden">Sage garden</option>
+                <option value="night_neon">Night neon</option>
+                <option value="coffee_sand">Coffee sand</option>
+                <option value="berry_lounge">Berry lounge</option>
+                <option value="forest_ember">Forest ember</option>
+                <option value="royal_indigo">Royal indigo</option>
+                <option value="sea_breeze">Sea breeze</option>
+                <option value="cherry_noir">Cherry noir</option>
+                <option value="amber_craft">Amber craft</option>
+                <option value="mint_minimal">Mint minimal</option>
+                <option value="steel_business">Steel business</option>
+                <option value="sunset_orange">Sunset orange</option>
+                <option value="lavender_soft">Lavender soft</option>
+                <option value="graphite_gold">Graphite gold</option>
+                <option value="cyber_purple">Cyber purple</option>
+                <option value="nordic_frost">Nordic frost</option>
+              </select>
+            </label>
+            <label class="field"><span>Режим</span>
+              <select name="theme_mode">
+                <option value="light">Светлый</option>
+                <option value="dark">Тёмный</option>
+              </select>
+            </label>
+          </div>
+          <label class="checkbox-row top-gap">
+            <input type="checkbox" name="use_custom_palette">
+            <span>Использовать свои цвета вместо готовой темы</span>
+          </label>
+          <div class="grid grid-two top-gap">
+            <label class="field compact-field"><span>Акцент</span><input type="color" name="accent_color"></label>
+            <label class="field compact-field"><span>Основной текст</span><input type="color" name="text_color"></label>
+            <label class="field compact-field"><span>Фон карточек</span><input type="color" name="card_background_color"></label>
+            <label class="field compact-field"><span>Текст карточек</span><input type="color" name="card_text_color"></label>
+            <label class="field compact-field"><span>Фон бейджей</span><input type="color" name="badge_background_color"></label>
+            <label class="field compact-field"><span>Текст бейджей</span><input type="color" name="badge_text_color"></label>
+            <label class="field compact-field"><span>Фон CTA</span><input type="color" name="cta_background_color"></label>
+            <label class="field compact-field"><span>Текст CTA</span><input type="color" name="cta_text_color"></label>
+          </div>
+          <div class="button-row">
+            <button class="button button-primary" type="submit" id="venue-branding-submit">Сохранить палитру</button>
+            <button class="button button-secondary" type="button" id="venue-branding-reset">Сбросить к теме</button>
+          </div>
+          <div class="contrast-report top-gap" id="venue-branding-contrast-report"></div>
+        </form>
+        <div class="compact-card top-gap venue-branding-preview" id="venue-branding-preview">
+          <span class="pill" id="venue-branding-preview-badge">Бейдж</span>
+          <h3>Предпросмотр страницы заведения</h3>
+          <p>Так будет выглядеть карточка, часть текста и основная кнопка после сохранения.</p>
+          <button class="button" type="button" id="venue-branding-preview-cta">Забронировать</button>
+        </div>
+        <p class="success-text hidden" id="venue-branding-message"></p>
+        <p class="error-text hidden" id="venue-branding-error"></p>
+      </div>
+    </details>
+
+    <details class="card accordion-card" id="venue-layout-accordion">
+      <summary class="accordion-summary">
+        <div>
+          <span class="section-kicker">Схема залов</span>
+          <h2>Редактор залов и планировки</h2>
+        </div>
+        <span class="accordion-indicator" aria-hidden="true"></span>
+      </summary>
+      <div class="accordion-content page-stack">
+        <section class="card compact-card surface-soft-card" id="venue-layout-section">
+          <p class="muted-block">Схема зала редактируется прямо внутри страницы заведения. Блок можно раскрыть только тогда, когда он нужен, чтобы не перегружать экран. Внутри доступны масштабирование, создание залов и Drag and Drop редактор.</p>
+        </section>
+
+        <section class="card compact-card">
+          <div class="toolbar-row">
+            <div class="field selector-field hidden" id="layout-venue-selector-wrap">
+              <span>Заведение</span>
+              <select id="layout-venue-select"></select>
+            </div>
+            <div class="field selector-field">
+              <span>Зал</span>
+              <select id="layout-hall-select"></select>
+            </div>
+            <div class="field compact-field">
+              <span>Ширина схемы</span>
+              <input type="number" id="layout-canvas-width" min="480" step="20" value="1200">
+            </div>
+            <div class="field compact-field">
+              <span>Высота схемы</span>
+              <input type="number" id="layout-canvas-height" min="320" step="20" value="800">
+            </div>
+          </div>
+
+          <div class="card-inline top-gap">
+            <div class="stack-sm flex-grow">
+              <strong>Добавить новый зал</strong>
+              <div class="toolbar-row">
+                <label class="field compact-field flex-grow"><span>Название</span><input id="new-hall-name" placeholder="Например, Основной зал"></label>
+                <label class="field compact-field flex-grow"><span>Описание</span><input id="new-hall-description" placeholder="Краткое описание зала"></label>
+                <label class="field compact-field"><span>Вместимость</span><input type="number" id="new-hall-capacity" min="1" value="24"></label>
+                <button class="button button-secondary" type="button" id="create-hall-button">Создать зал</button>
+              </div>
+            </div>
+          </div>
+          <p class="success-text hidden" id="create-hall-message"></p>
+          <p class="error-text hidden" id="create-hall-error"></p>
+        </section>
+
+        <section class="grid layout-editor-grid">
+          <article class="card layout-toolbox-card">
+            <div class="section-topline">
+              <span class="section-kicker">Палитра элементов</span>
+              <h2>Перетащите нужный блок на поле</h2>
+            </div>
+            <div class="layout-palette" id="layout-palette">
+              <button class="palette-item palette-item-table" type="button" draggable="true" data-palette-type="table">Стол</button>
+              <button class="palette-item palette-item-wall" type="button" draggable="true" data-palette-type="wall">Стена</button>
+              <button class="palette-item palette-item-window" type="button" draggable="true" data-palette-type="window">Окно</button>
+              <button class="palette-item palette-item-bar" type="button" draggable="true" data-palette-type="bar">Барная стойка</button>
+              <button class="palette-item palette-item-entrance" type="button" draggable="true" data-palette-type="entrance">Вход</button>
+              <button class="palette-item palette-item-cashier" type="button" draggable="true" data-palette-type="cashier">Касса</button>
+              <button class="palette-item palette-item-wc" type="button" draggable="true" data-palette-type="wc">Санузел</button>
+              <button class="palette-item palette-item-column" type="button" draggable="true" data-palette-type="column">Колонна</button>
+              <button class="palette-item palette-item-plant" type="button" draggable="true" data-palette-type="plant">Растение</button>
+              <button class="palette-item palette-item-sofa" type="button" draggable="true" data-palette-type="sofa">Диван</button>
+              <button class="palette-item palette-item-label" type="button" draggable="true" data-palette-type="label">Подпись</button>
+            </div>
+            <div class="subcard top-gap">
+              <h3 class="subcard-title">Подсказка</h3>
+              <p>У стены и окна появились ручки растягивания. Масштаб меняется кнопками над схемой, чтобы можно было увидеть весь зал целиком.</p>
+            </div>
+          </article>
+
+          <article class="card layout-canvas-card">
+            <div class="layout-zoom-toolbar">
+              <button class="button button-secondary" type="button" id="layout-zoom-out">−</button>
+              <button class="button button-secondary" type="button" id="layout-zoom-fit">Показать целиком</button>
+              <button class="button button-secondary" type="button" id="layout-zoom-in">+</button>
+              <span class="pill" id="layout-zoom-value">100%</span>
+            </div>
+            <div class="section-topline">
+              <span class="section-kicker">Поле схемы</span>
+              <h2 id="layout-stage-title">Выберите зал</h2>
+            </div>
+            <div class="layout-shell layout-stage-wrapper" id="layout-stage-wrapper">
+              <div class="layout-stage-sizer" id="layout-stage-sizer">
+                <div class="layout-stage" id="layout-stage" style="width:1200px;height:800px;">
+                  <div class="layout-grid-overlay"></div>
+                </div>
+              </div>
+            </div>
+            <div class="layout-actions top-gap">
+              <button class="button button-secondary" type="button" id="layout-reset-button">Сбросить к последнему сохранению</button>
+              <button class="button button-primary" type="button" id="layout-save-button">Сохранить схему</button>
+            </div>
+            <p class="success-text hidden" id="layout-save-message"></p>
+            <p class="error-text hidden" id="layout-save-error"></p>
+          </article>
+
+          <article class="card layout-sidebar">
+            <div class="section-topline">
+              <span class="section-kicker">Свойства элемента</span>
+              <h2>Настройка выбранного блока</h2>
+            </div>
+            <div id="layout-empty-selection" class="muted-block">Выберите элемент на схеме, чтобы изменить его свойства.</div>
+            <form class="form hidden" id="layout-item-form">
+              <label class="field"><span>Подпись / название</span><input id="item-label"></label>
+              <label class="field hidden" id="item-seats-field"><span>Количество мест за столом</span><input type="number" id="item-seats" min="1" max="24" value="4"></label>
+              <div class="grid grid-two">
+                <label class="field compact-field"><span>X</span><input type="number" id="item-x"></label>
+                <label class="field compact-field"><span>Y</span><input type="number" id="item-y"></label>
+                <label class="field compact-field"><span>Ширина</span><input type="number" id="item-width" min="20"></label>
+                <label class="field compact-field"><span>Высота</span><input type="number" id="item-height" min="10"></label>
+              </div>
+              <label class="field compact-field"><span>Поворот</span><input type="number" id="item-rotation" min="0" max="359" value="0"></label>
+              <div class="toolbar-row">
+                <button class="button button-secondary" type="button" id="layout-duplicate-button">Дублировать</button>
+                <button class="button button-secondary" type="button" id="layout-delete-button">Удалить</button>
+              </div>
+            </form>
+          </article>
+        </section>
+      </div>
+    </details>
+  </section>
+</section>
+{% endblock %}

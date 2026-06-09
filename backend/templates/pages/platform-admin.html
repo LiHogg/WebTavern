@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — админ платформы{% endblock %}
+{% block page_id %}platform-admin{% endblock %}
+{% block content %}
+<section class="page-stack narrow-page">
+  <section class="card">
+    <span class="section-kicker">Админ-панель платформы</span>
+    <h1>Управление платформой</h1>
+    <p>Блок модерации теперь встроен прямо в кабинет администратора. Здесь видны заявки на публикацию и действия по ним.</p>
+  </section>
+
+  <section class="card" id="platform-admin-auth-warning">Проверяем доступ администратора…</section>
+  <section class="card error-card hidden" id="platform-admin-error"></section>
+
+  <section class="grid grid-two hidden" id="platform-admin-dashboard">
+    <article class="card compact-card">
+      <div class="section-topline">
+        <span class="section-kicker">Модерация заведений</span>
+        <h2>Очередь заявок</h2>
+      </div>
+      <div class="definition-list" id="platform-admin-summary">
+        <div><span>Ожидают решения</span><strong>0</strong></div>
+        <div><span>Доступное действие</span><strong>Публикация или возврат</strong></div>
+      </div>
+    </article>
+
+    <article class="card compact-card">
+      <div class="section-topline">
+        <span class="section-kicker">Статус системы</span>
+        <h2>Базовая админ-основа</h2>
+      </div>
+      <p>Эта страница остаётся базовой для будущих блоков аналитики и управления платформой, но модерация уже работает здесь же.</p>
+    </article>
+  </section>
+
+  <section class="card hidden" id="platform-admin-moderation-card">
+    <div class="section-topline">
+      <span class="section-kicker">Заявки на модерации</span>
+      <h2>Заведения, ожидающие решения</h2>
+    </div>
+    <div class="grid grid-two" id="platform-admin-moderation-list"></div>
+    <p class="success-text top-gap hidden" id="platform-admin-message"></p>
+  </section>
+</section>
+{% endblock %}

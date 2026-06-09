@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — кабинет менеджера{% endblock %}
+{% block page_id %}manager{% endblock %}
+{% block content %}
+<section class="page-stack">
+  <section class="card">
+    <span class="section-kicker">Кабинет менеджера</span>
+    <h1>Заведения в работе</h1>
+    <p>Здесь менеджер видит площадки, фильтрует брони по датам, статусам, залам и столам, переключается между списком и календарным видом, а также вручную подтверждает, отменяет и переносит бронь, если это разрешено правилами заведения.</p>
+  </section>
+
+  <section class="card" id="manager-auth-warning">Проверяем доступ менеджера…</section>
+  <section class="card error-card hidden" id="manager-error"></section>
+
+  <section class="page-stack hidden" id="manager-dashboard">
+    <section class="card compact-card">
+      <div class="definition-list" id="manager-summary">
+        <div><span>Доступных заведений</span><strong>0</strong></div>
+        <div><span>Открытых броней</span><strong>0</strong></div>
+        <div><span>Перенос по правилам</span><strong>Проверяется…</strong></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-topline">
+        <span class="section-kicker">Мои площадки</span>
+        <h2>Выберите заведение для редактирования</h2>
+      </div>
+      <div class="grid grid-three" id="manager-venues"></div>
+    </section>
+
+
+    <section class="card">
+      <div class="card-heading-row">
+        <div><span class="section-kicker">Уведомления</span><h2>Новые события по площадкам</h2></div>
+        <button class="button button-secondary" type="button" id="manager-notifications-read-all">Отметить всё прочитанным</button>
+        <a class="button button-secondary" href="/notifications/">Все уведомления</a>
+      </div>
+      <div class="page-stack top-gap" id="manager-notifications-list"></div>
+      <p class="muted-block hidden" id="manager-notifications-empty">Пока уведомлений нет.</p>
+    </section>
+
+    <section class="card">
+      <div class="section-topline">
+        <span class="section-kicker">Бронирования</span>
+        <h2>Список и календарь броней</h2>
+      </div>
+      <div class="grid grid-three top-gap manager-filters-grid">
+        <label class="field selector-field">
+          <span>Заведение</span>
+          <select id="manager-bookings-venue-filter"></select>
+        </label>
+        <label class="field compact-field">
+          <span>Дата с</span>
+          <input type="date" id="manager-bookings-date-from">
+        </label>
+        <label class="field compact-field">
+          <span>Дата по</span>
+          <input type="date" id="manager-bookings-date-to">
+        </label>
+        <label class="field selector-field">
+          <span>Статус</span>
+          <select id="manager-bookings-status-filter">
+            <option value="">Все статусы</option>
+            <option value="hold">Зарезервировано</option>
+            <option value="pending_confirmation">Нужно подтвердить</option>
+            <option value="waiting_for_payment">Ожидает оплаты</option>
+            <option value="paid">Оплачено</option>
+            <option value="confirmed">Подтверждено</option>
+            <option value="cancelled">Отменено</option>
+            <option value="completed">Завершено</option>
+            <option value="no_show">Неявка</option>
+          </select>
+        </label>
+        <label class="field selector-field">
+          <span>Зал</span>
+          <select id="manager-bookings-hall-filter"></select>
+        </label>
+        <label class="field selector-field">
+          <span>Стол</span>
+          <select id="manager-bookings-table-filter"></select>
+        </label>
+      </div>
+      <div class="toolbar-row top-gap">
+        <div class="button-row" id="manager-view-toggle">
+          <button class="button button-primary" type="button" data-view="list">Список</button>
+          <button class="button button-secondary" type="button" data-view="calendar">Календарь</button>
+          <button class="button button-secondary" type="button" data-quick-filter="today">Сегодня</button>
+          <button class="button button-secondary" type="button" data-quick-filter="tomorrow">Завтра</button>
+          <button class="button button-secondary" type="button" data-quick-filter="next2h">Ближайшие 2 часа</button>
+          <button class="button button-secondary" type="button" data-quick-filter="pending">Ждут подтверждения</button>
+          <button class="button button-secondary" type="button" id="manager-bookings-reset-filters">Сбросить фильтры</button>
+        </div>
+        <div class="definition-list compact-definition-list" id="manager-bookings-summary">
+          <div><span>Нужно подтвердить</span><strong>0</strong></div>
+          <div><span>Активные</span><strong>0</strong></div>
+          <div><span>Всего в списке</span><strong>0</strong></div>
+        </div>
+      </div>
+      <p class="success-text hidden" id="manager-bookings-message"></p>
+      <p class="error-text hidden" id="manager-bookings-error"></p>
+      <div class="page-stack top-gap" id="manager-bookings-list"></div>
+      <div class="page-stack top-gap hidden" id="manager-bookings-calendar"></div>
+        <section class="card">
+      <div class="card-heading-row">
+        <div><span class="section-kicker">Аудит</span><h2>Последние действия менеджеров</h2></div>
+        <p class="muted-block" id="manager-overview-summary">Загрузка сводки...</p>
+      </div>
+      <div class="page-stack top-gap" id="manager-audit-log-list"></div>
+      <p class="muted-block hidden" id="manager-audit-log-empty">Пока действий нет.</p>
+    </section>
+  </section>
+</section>
+{% endblock %}

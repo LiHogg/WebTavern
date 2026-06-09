@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — заведение{% endblock %}
+{% block page_id %}venue-detail{% endblock %}
+{% block venue_slug %}{{ slug }}{% endblock %}
+{% block content %}
+<section id="venue-detail-loading" class="panel">Загрузка страницы заведения…</section>
+<section id="venue-detail-error" class="panel panel-error hidden"></section>
+<section id="venue-detail-content" class="page-stack hidden"></section>
+{% endblock %}

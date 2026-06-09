@@ -1,0 +1,93 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}WebTavern{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'webtavern/styles.css' %}">
+</head>
+<body data-page="{% block page_id %}default{% endblock %}" data-venue-slug="{% block venue_slug %}{% endblock %}" data-manage-venue-slug="{% block manage_venue_slug %}{% endblock %}">
+  <div class="page-bg">
+    <div class="container app-shell">
+      <header class="site-header" id="site-header">
+        <a class="brand" href="/">
+          <span class="brand-mark">WT</span>
+          <span class="brand-copy">
+            <strong>WebTavern</strong>
+            <small>Платформа поиска заведений и бронирования столов</small>
+          </span>
+        </a>
+
+        <input class="menu-state" type="checkbox" id="header-menu-state" aria-hidden="true">
+        <label class="menu-toggle" for="header-menu-state" aria-label="Открыть меню">
+          <span class="menu-toggle-box" aria-hidden="true">
+            <span class="menu-toggle-line"></span>
+            <span class="menu-toggle-line"></span>
+            <span class="menu-toggle-line"></span>
+          </span>
+        </label>
+
+        <nav class="nav" aria-label="Основная навигация" id="main-nav"></nav>
+
+        <div class="header-actions" id="header-actions"></div>
+      </header>
+
+      <main class="content-area">
+        {% block content %}{% endblock %}
+      </main>
+      <footer class="site-footer">
+        <div class="site-footer-main">
+          <section class="site-footer-brand" aria-label="О проекте">
+            <strong>WebTavern</strong>
+            <p>Учебная платформа поиска заведений и бронирования столов.</p>
+            <p class="site-footer-note">Дипломный демонстрационный проект. Перед коммерческим запуском реквизиты и условия работы нужно заменить на данные фактического оператора.</p>
+          </section>
+
+          <section class="footer-column" aria-label="Навигация по платформе">
+            <h2>Платформа</h2>
+            <nav class="footer-links">
+              <a href="/">Главная</a>
+              <a href="/venues/">Заведения</a>
+              <a href="/notifications/">Уведомления</a>
+              <a href="/partner/">Для владельцев</a>
+              <a href="/legal/">Все документы</a>
+            </nav>
+          </section>
+
+          <section class="footer-column" aria-label="Правовые документы">
+            <h2>Документы</h2>
+            <nav class="footer-links">
+              <a href="/legal/privacy/">Политика конфиденциальности</a>
+              <a href="/legal/terms/">Пользовательское соглашение</a>
+              <a href="/legal/personal-data/">Согласие на обработку персональных данных</a>
+              <a href="/legal/booking-rules/">Правила бронирования и отмены</a>
+              <a href="/legal/partner-rules/">Правила размещения заведений</a>
+              <a href="/legal/contacts/">Правовая информация и контакты</a>
+            </nav>
+          </section>
+
+          <section class="footer-column" aria-label="Контакты">
+            <h2>Контакты</h2>
+            <div class="footer-contact-list">
+              <a href="mailto:support@webtavern.local">support@webtavern.local</a>
+              <a href="mailto:privacy@webtavern.local">privacy@webtavern.local</a>
+              <a href="mailto:partners@webtavern.local">partners@webtavern.local</a>
+            </div>
+            <p class="site-footer-note">Вопросы по аккаунту, броням, персональным данным и подключению заведений.</p>
+          </section>
+        </div>
+
+        <div class="site-footer-bottom">
+          <span>© 2026 WebTavern</span>
+          <span>Учебный проект. Не является публичной офертой.</span>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+
+  {{ webtavern_maps_config|json_script:"webtavern-maps-config" }}
+  <script src="{% static 'webtavern/app.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}WebTavern — редактор схемы зала{% endblock %}
+{% block page_id %}layout-editor{% endblock %}
+{% block content %}
+<section class="page-stack">
+  <section class="card">
+    <span class="section-kicker">Планировка зала</span>
+    <h1>Drag and Drop редактор расположения столов</h1>
+    <p>Страница доступна владельцу и менеджеру. Здесь можно собрать 2D-схему зала: разместить столы, стены, окна, вход, барную стойку, кассу, санузел, колонны и прочие элементы.</p>
+  </section>
+
+  <section class="card" id="layout-editor-auth-warning">Проверяем доступ к редактору…</section>
+  <section class="card error-card hidden" id="layout-editor-error"></section>
+
+  <section class="page-stack hidden" id="layout-editor-dashboard">
+    <section class="card compact-card">
+      <div class="toolbar-row">
+        <div class="field selector-field" id="layout-venue-selector-wrap">
+          <span>Заведение</span>
+          <select id="layout-venue-select"></select>
+        </div>
+        <div class="field selector-field">
+          <span>Зал</span>
+          <select id="layout-hall-select"></select>
+        </div>
+        <div class="field compact-field">
+          <span>Ширина canvas</span>
+          <input type="number" id="layout-canvas-width" min="480" step="20" value="1200">
+        </div>
+        <div class="field compact-field">
+          <span>Высота canvas</span>
+          <input type="number" id="layout-canvas-height" min="320" step="20" value="800">
+        </div>
+      </div>
+
+      <div class="card-inline top-gap">
+        <div class="stack-sm flex-grow">
+          <strong>Добавить новый зал</strong>
+          <div class="toolbar-row">
+            <label class="field compact-field flex-grow"><span>Название</span><input id="new-hall-name" placeholder="Например, Основной зал"></label>
+            <label class="field compact-field flex-grow"><span>Описание</span><input id="new-hall-description" placeholder="Краткое описание зала"></label>
+            <label class="field compact-field"><span>Вместимость</span><input type="number" id="new-hall-capacity" min="1" value="24"></label>
+            <button class="button button-secondary" type="button" id="create-hall-button">Создать зал</button>
+          </div>
+        </div>
+      </div>
+      <p class="success-text hidden" id="create-hall-message"></p>
+      <p class="error-text hidden" id="create-hall-error"></p>
+    </section>
+
+    <section class="grid layout-editor-grid">
+      <article class="card layout-toolbox-card">
+        <div class="section-topline">
+          <span class="section-kicker">Палитра элементов</span>
+          <h2>Перетащите нужный блок на поле</h2>
+        </div>
+        <div class="layout-palette" id="layout-palette">
+          <button class="palette-item palette-item-table" type="button" draggable="true" data-palette-type="table">Стол</button>
+          <button class="palette-item palette-item-wall" type="button" draggable="true" data-palette-type="wall">Стена</button>
+          <button class="palette-item palette-item-window" type="button" draggable="true" data-palette-type="window">Окно</button>
+          <button class="palette-item palette-item-bar" type="button" draggable="true" data-palette-type="bar">Барная стойка</button>
+          <button class="palette-item palette-item-entrance" type="button" draggable="true" data-palette-type="entrance">Вход</button>
+          <button class="palette-item palette-item-cashier" type="button" draggable="true" data-palette-type="cashier">Касса</button>
+          <button class="palette-item palette-item-wc" type="button" draggable="true" data-palette-type="wc">Санузел</button>
+          <button class="palette-item palette-item-column" type="button" draggable="true" data-palette-type="column">Колонна</button>
+          <button class="palette-item palette-item-plant" type="button" draggable="true" data-palette-type="plant">Растение</button>
+          <button class="palette-item palette-item-sofa" type="button" draggable="true" data-palette-type="sofa">Диван</button>
+          <button class="palette-item palette-item-label" type="button" draggable="true" data-palette-type="label">Подпись</button>
+        </div>
+        <div class="subcard top-gap">
+          <h3 class="subcard-title">Как работать</h3>
+          <p>Перетащите элемент из палитры на поле. Затем выделите его, чтобы поменять размеры, подпись, число мест за столом и другие параметры. Уже добавленные элементы тоже можно перетаскивать мышкой.</p>
+        </div>
+      </article>
+
+      <article class="card layout-canvas-card">
+        <div class="layout-zoom-toolbar">
+          <button class="button button-secondary" type="button" id="layout-zoom-out">−</button>
+          <button class="button button-secondary" type="button" id="layout-zoom-fit">Показать целиком</button>
+          <button class="button button-secondary" type="button" id="layout-zoom-in">+</button>
+          <span class="pill" id="layout-zoom-value">100%</span>
+        </div>
+        <div class="section-topline">
+          <span class="section-kicker">Поле схемы</span>
+          <h2 id="layout-stage-title">Выберите зал</h2>
+        </div>
+        <div class="layout-shell layout-stage-wrapper" id="layout-stage-wrapper">
+          <div class="layout-stage-sizer" id="layout-stage-sizer">
+            <div class="layout-stage" id="layout-stage" style="width:1200px;height:800px;">
+              <div class="layout-grid-overlay"></div>
+            </div>
+          </div>
+        </div>
+        <div class="layout-actions top-gap">
+          <button class="button button-secondary" type="button" id="layout-reset-button">Сбросить к последнему сохранению</button>
+          <button class="button button-primary" type="button" id="layout-save-button">Сохранить схему</button>
+        </div>
+        <p class="success-text hidden" id="layout-save-message"></p>
+        <p class="error-text hidden" id="layout-save-error"></p>
+      </article>
+
+      <article class="card layout-sidebar">
+        <div class="section-topline">
+          <span class="section-kicker">Свойства элемента</span>
+          <h2>Настройка выбранного блока</h2>
+        </div>
+        <div id="layout-empty-selection" class="muted-block">Выберите элемент на схеме, чтобы изменить его свойства.</div>
+        <form class="form hidden" id="layout-item-form">
+          <label class="field"><span>Подпись / название</span><input id="item-label"></label>
+          <label class="field hidden" id="item-seats-field"><span>Количество мест за столом</span><input type="number" id="item-seats" min="1" max="24" value="4"></label>
+          <div class="grid grid-two">
+            <label class="field compact-field"><span>X</span><input type="number" id="item-x"></label>
+            <label class="field compact-field"><span>Y</span><input type="number" id="item-y"></label>
+            <label class="field compact-field"><span>Ширина</span><input type="number" id="item-width" min="20"></label>
+            <label class="field compact-field"><span>Высота</span><input type="number" id="item-height" min="10"></label>
+          </div>
+          <label class="field compact-field"><span>Поворот</span><input type="number" id="item-rotation" min="0" max="359" value="0"></label>
+          <div class="toolbar-row">
+            <button class="button button-secondary" type="button" id="layout-duplicate-button">Дублировать</button>
+            <button class="button button-secondary" type="button" id="layout-delete-button">Удалить</button>
+          </div>
+        </form>
+      </article>
+    </section>
+  </section>
+</section>
+{% endblock %}
