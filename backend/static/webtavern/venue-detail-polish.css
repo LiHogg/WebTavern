@@ -2,14 +2,21 @@
 
 .venue-detail-columns {
   display: grid;
-  grid-template-columns: minmax(320px, 0.9fr) minmax(640px, 1.35fr);
-  gap: 24px;
+  grid-template-columns: minmax(min(100%, 320px), 0.9fr) minmax(0, 1.35fr);
+  gap: clamp(14px, 2.1vw, 24px);
   align-items: start;
 }
 
 .venue-detail-left-stack,
-.venue-detail-booking-panel {
+.venue-detail-booking-panel,
+.venue-layout-viewer,
+.layout-canvas-card,
+.layout-toolbox-card,
+.layout-editor-card,
+.layout-stage-wrapper,
+.layout-preview-wrapper {
   min-width: 0;
+  max-width: 100%;
 }
 
 .venue-side-hall-panel .venue-layout-toolbar {
@@ -77,15 +84,37 @@
   padding: 0;
 }
 
+.venue-layout-viewer,
+.venue-layout-viewer.layout-stage-wrapper,
+.layout-stage-wrapper-responsive-fit {
+  width: 100%;
+  max-width: 100%;
+  min-height: auto;
+  max-height: none;
+  overflow: hidden;
+  padding: clamp(8px, 1.8vw, 14px);
+}
+
+.venue-layout-viewer .layout-stage-wrapper,
+.venue-layout-viewer .layout-stage-sizer,
+.layout-stage-wrapper-responsive-fit .layout-stage-sizer {
+  max-width: 100%;
+}
+
 .venue-layout-viewer .layout-stage {
   overflow: hidden;
   border: 0;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.74));
-  box-shadow: inset 0 0 0 18px rgba(126, 101, 78, 0.62), inset 0 0 0 22px rgba(255, 255, 255, 0.34), 0 16px 32px rgba(31, 41, 55, 0.08);
+  box-shadow: inset 0 0 0 clamp(10px, 2.4vw, 18px) rgba(126, 101, 78, 0.62), inset 0 0 0 clamp(13px, 2.9vw, 22px) rgba(255, 255, 255, 0.34), 0 16px 32px rgba(31, 41, 55, 0.08);
+}
+
+.venue-layout-viewer .layout-stage-responsive-fit {
+  max-width: none;
+  will-change: transform;
 }
 
 .venue-layout-viewer .layout-grid-overlay {
-  inset: 22px;
+  inset: clamp(12px, 2.9vw, 22px);
   border-radius: 10px;
 }
 
@@ -120,7 +149,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: clamp(8px, 1.1vw, 11px);
 }
 
 .venue-layout-viewer .layout-editor-item-bar,
@@ -138,9 +167,92 @@
   z-index: 10;
 }
 
+.layout-zoom-toolbar {
+  width: 100%;
+  max-width: 100%;
+  gap: clamp(6px, 1.6vw, 10px);
+}
+
+.layout-zoom-toolbar .button,
+.layout-zoom-toolbar button,
+.layout-zoom-toolbar .pill,
+.layout-zoom-toolbar .status-chip {
+  min-width: 0;
+  min-height: clamp(36px, 7vw, 44px);
+  padding-inline: clamp(10px, 2.4vw, 16px);
+  white-space: nowrap;
+}
+
+.venue-layout-toolbar,
+.layout-actions,
+.toolbar-row,
+.button-row {
+  max-width: 100%;
+}
+
+.layout-editor-grid {
+  grid-template-columns: minmax(min(100%, 240px), clamp(240px, 22vw, 320px)) minmax(0, 1fr) minmax(min(100%, 240px), clamp(240px, 22vw, 320px));
+}
+
+.layout-shell,
+.layout-stage-wrapper,
+.layout-preview-wrapper {
+  width: 100%;
+  max-width: 100%;
+}
+
+.layout-stage-wrapper {
+  min-height: clamp(360px, 58vh, 760px);
+  max-height: min(72vh, 820px);
+}
+
 @media (max-width: 1100px) {
   .venue-detail-columns {
     grid-template-columns: 1fr;
+  }
+
+  .layout-editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .venue-layout-toolbar,
+  .venue-side-hall-panel .venue-layout-toolbar,
+  .layout-actions,
+  .toolbar-row,
+  .button-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .venue-layout-select-field,
+  .selector-field,
+  .field,
+  .field input,
+  .field select,
+  .field textarea,
+  .button-row .button,
+  .toolbar-row .button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .layout-zoom-toolbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+  }
+
+  .layout-zoom-toolbar .button:not(:first-child):not(:last-child) {
+    width: 100%;
+  }
+
+  .layout-stage-wrapper,
+  .venue-layout-viewer {
+    min-height: auto;
+    max-height: none;
   }
 }
 
@@ -148,5 +260,33 @@
   .venue-photo-library .venue-slider-thumb {
     width: 58px;
     height: 42px;
+  }
+}
+
+@media (max-width: 480px) {
+  .venue-detail-columns,
+  .content-area,
+  .page-stack,
+  .stack-lg {
+    gap: 14px;
+  }
+
+  .hero,
+  .card,
+  .panel,
+  .venue-card,
+  .hall-card,
+  .subcard,
+  .layout-editor-card {
+    padding: clamp(14px, 4.2vw, 18px);
+  }
+
+  .layout-zoom-toolbar {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .layout-zoom-toolbar > :last-child {
+    grid-column: 1 / -1;
+    justify-self: end;
   }
 }
