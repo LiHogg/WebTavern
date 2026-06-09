@@ -1,5 +1,12 @@
 (function () {
   const demoPhotos = [
+    '/media/venues/demo/pyatkin-nn-1.svg',
+    '/media/venues/demo/mitrich-steakhouse-nn-1.svg',
+    '/media/venues/demo/neva-loft-1.svg',
+    '/media/venues/demo/ural-yard-1.svg',
+    '/media/venues/demo/siberia-station-1.svg',
+    '/media/venues/demo/black-sea-table-1.svg',
+    '/media/venues/demo/amber-port-1.svg',
     '/static/webtavern/demo-photos/cafe-hall-1.svg',
     '/static/webtavern/demo-photos/cafe-hall-2.svg',
     '/static/webtavern/demo-photos/cafe-hall-3.svg',
