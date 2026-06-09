@@ -6,7 +6,6 @@ from pathlib import Path
 from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
 from django.utils.http import http_date
-from django.utils.text import slugify
 
 
 DEMO_MEDIA_PREFIX = "venues/demo/"
