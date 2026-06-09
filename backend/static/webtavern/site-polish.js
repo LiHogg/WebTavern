@@ -66,6 +66,111 @@
     });
   }
 
+  function elementBox(element, extraGap) {
+    const gap = extraGap || 0;
+    const left = element.offsetLeft - gap;
+    const top = element.offsetTop - gap;
+    const width = element.offsetWidth + gap * 2;
+    const height = element.offsetHeight + gap * 2;
+    return {
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height
+    };
+  }
+
+  function boxesIntersect(a, b) {
+    return !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom);
+  }
+
+  function boxAt(left, top, width, height, gap) {
+    const safeGap = gap || 0;
+    return {
+      left: left - safeGap,
+      top: top - safeGap,
+      width: width + safeGap * 2,
+      height: height + safeGap * 2,
+      right: left + width + safeGap,
+      bottom: top + height + safeGap
+    };
+  }
+
+  function isObstacle(element) {
+    return element.matches([
+      '.layout-editor-item-window',
+      '.layout-editor-item-bar',
+      '.layout-editor-item-entrance',
+      '.layout-editor-item-cashier',
+      '.layout-editor-item-wc',
+      '.layout-editor-item-column',
+      '.layout-editor-item-plant',
+      '.layout-editor-item-sofa',
+      '.layout-editor-item-label'
+    ].join(','));
+  }
+
+  function findFreePosition(stage, item, occupied) {
+    const original = {
+      left: item.offsetLeft,
+      top: item.offsetTop,
+      width: item.offsetWidth,
+      height: item.offsetHeight
+    };
+    const padding = 42;
+    const topPadding = 62;
+    const step = 18;
+    const maxLeft = Math.max(padding, stage.clientWidth - padding - original.width);
+    const maxTop = Math.max(topPadding, stage.clientHeight - padding - original.height);
+    const startLeft = Math.min(Math.max(original.left, padding), maxLeft);
+    const startTop = Math.min(Math.max(original.top, topPadding), maxTop);
+
+    let best = { left: startLeft, top: startTop, distance: Infinity };
+
+    for (let top = topPadding; top <= maxTop; top += step) {
+      for (let left = padding; left <= maxLeft; left += step) {
+        const candidate = boxAt(left, top, original.width, original.height, 12);
+        if (occupied.some((box) => boxesIntersect(candidate, box))) continue;
+        const distance = Math.abs(left - startLeft) + Math.abs(top - startTop);
+        if (distance < best.distance) {
+          best = { left, top, distance };
+        }
+      }
+    }
+
+    return best.distance === Infinity ? { left: startLeft, top: startTop } : best;
+  }
+
+  function deconflictLayoutItems(stage) {
+    if (!stage || stage.dataset.layoutDeconflictDone === '1') return;
+    const tables = Array.from(stage.querySelectorAll('.layout-viewer-table-button'));
+    if (!tables.length) return;
+
+    const obstacles = Array.from(stage.querySelectorAll('[class*="layout-editor-item-"]'))
+      .filter((element) => !element.classList.contains('layout-editor-item-wall'))
+      .filter(isObstacle)
+      .map((element) => elementBox(element, 12));
+
+    const occupied = [...obstacles];
+    tables
+      .sort((a, b) => (a.offsetTop - b.offsetTop) || (a.offsetLeft - b.offsetLeft))
+      .forEach((table) => {
+        const currentBox = elementBox(table, 12);
+        const hasCollision = occupied.some((box) => boxesIntersect(currentBox, box));
+        if (hasCollision) {
+          const position = findFreePosition(stage, table, occupied);
+          table.style.left = `${position.left}px`;
+          table.style.top = `${position.top}px`;
+          table.classList.add('layout-viewer-table-deconflicted');
+        }
+        occupied.push(elementBox(table, 14));
+      });
+
+    stage.dataset.layoutDeconflictDone = '1';
+  }
+
   function polishVenueLayoutStage(root) {
     const scope = root || document;
     scope.querySelectorAll('.venue-layout-viewer .layout-stage').forEach((stage) => {
@@ -74,6 +179,7 @@
         wall.classList.add('layout-viewer-wall-visible');
         wall.setAttribute('aria-hidden', 'true');
       });
+      window.requestAnimationFrame(() => deconflictLayoutItems(stage));
     });
   }
 
