@@ -82,13 +82,15 @@ def _calculate_table_count_price(*, venue, table_count: int, currency: str) -> d
                 applied_note = f"Накопительная стоимость {count} стол(ов): акция меньшего набора + доплата за стол"
             else:
                 applied_note = f"Накопительная стоимость {count} стол(ов)"
-        elif exact_rule:
+        elif exact_rule and exact_amount >= previous_amount:
             amount = exact_amount
             applied_rule = exact_rule
             applied_note = exact_rule.title or f"Бронь {count} стол(ов)"
             applied_currency = exact_rule.price_currency or applied_currency or currency
         else:
             amount = previous_amount
+            if exact_rule:
+                applied_note = f"Накопительная стоимость {count} стол(ов): правило с меньшей суммой пропущено"
 
         calculated[count] = amount
 
