@@ -17,6 +17,9 @@
     '/static/webtavern/demo-photos/cafe-hall-4.svg'
   ];
 
+  let venuePriceDataPromise = null;
+  let pricePatchFrame = 0;
+
   function hashString(value) {
     return String(value || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
   }
@@ -263,9 +266,124 @@
     else leftStack.appendChild(panel);
   }
 
+  function parseMoney(value) {
+    const normalized = String(value || '')
+      .replace(/\s+/g, '')
+      .replace(/[^0-9,.-]/g, '')
+      .replace(',', '.');
+    const amount = Number.parseFloat(normalized);
+    return Number.isFinite(amount) ? amount : 0;
+  }
+
+  function formatMoneyRu(amount, currency) {
+    try {
+      return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: currency || 'RUB', maximumFractionDigits: 2 }).format(Number(amount) || 0);
+    } catch {
+      return `${(Number(amount) || 0).toFixed(2)} ${currency || 'RUB'}`;
+    }
+  }
+
+  function activePriceRules(venue) {
+    return Array.isArray(venue && venue.price_rules)
+      ? venue.price_rules.filter((rule) => rule && rule.is_active !== false && Number(rule.price_amount || 0) > 0)
+      : [];
+  }
+
+  function calculateCumulativeTablePrice(venue, tableCount) {
+    const count = Math.max(Number(tableCount) || 0, 0);
+    if (!venue || count <= 0) return null;
+    const rules = activePriceRules(venue)
+      .filter((rule) => rule.rule_type === 'table_count' && Number(rule.table_count || 0) > 0)
+      .sort((a, b) => Number(a.table_count || 0) - Number(b.table_count || 0));
+    if (!rules.length) return null;
+
+    const byCount = new Map();
+    rules.forEach((rule) => {
+      const ruleCount = Number(rule.table_count || 0);
+      if (ruleCount > 0 && !byCount.has(ruleCount)) byCount.set(ruleCount, rule);
+    });
+
+    const oneRule = byCount.get(1);
+    const unitAmount = oneRule ? Number(oneRule.price_amount || 0) : Number(venue.booking_rule?.deposit_amount || 0);
+    let currency = (oneRule && oneRule.price_currency) || venue.booking_rule?.deposit_currency || 'RUB';
+    const calculated = { 0: 0 };
+    let note = '';
+
+    for (let step = 1; step <= count; step += 1) {
+      const previousAmount = Number(calculated[step - 1] || 0);
+      const exactRule = byCount.get(step);
+      const exactAmount = exactRule ? Number(exactRule.price_amount || 0) : 0;
+      const additiveAmount = unitAmount > 0 ? previousAmount + unitAmount : null;
+
+      if (exactRule && (step === 1 || exactAmount >= previousAmount)) {
+        calculated[step] = exactAmount;
+        currency = exactRule.price_currency || currency;
+        note = exactRule.title || `Бронь ${step} стол(ов)`;
+      } else if (additiveAmount !== null) {
+        calculated[step] = additiveAmount;
+        note = exactRule && exactAmount < previousAmount
+          ? `Накопительная стоимость ${step} стол(ов): акция меньшего набора + доплата за стол`
+          : `Накопительная стоимость ${step} стол(ов)`;
+      } else if (exactRule) {
+        calculated[step] = exactAmount;
+        currency = exactRule.price_currency || currency;
+        note = exactRule.title || `Бронь ${step} стол(ов)`;
+      } else {
+        calculated[step] = previousAmount;
+      }
+    }
+
+    const amount = Number(calculated[count] || 0);
+    return amount > 0 ? { amount, currency, note: note || `Накопительная стоимость ${count} стол(ов)` } : null;
+  }
+
+  function selectedBookingTableCount() {
+    const bookingType = document.querySelector('#client-booking-type');
+    if (bookingType && String(bookingType.value || 'tables') === 'hall') return 0;
+    const hiddenValue = String(document.querySelector('#client-booking-table')?.value || '').trim();
+    if (hiddenValue) return hiddenValue.split(',').map((item) => item.trim()).filter(Boolean).length;
+    const selectedText = String(document.querySelector('#client-selected-table-inline')?.textContent || '');
+    const match = selectedText.match(/Выбрано столов:\s*(\d+)/i);
+    return match ? Number(match[1]) || 0 : 0;
+  }
+
+  async function loadVenuePriceData() {
+    if (venuePriceDataPromise) return venuePriceDataPromise;
+    const slug = document.body.getAttribute('data-venue-slug');
+    if (!slug) return null;
+    venuePriceDataPromise = fetch(`/api/v1/venues/${encodeURIComponent(slug)}/`, { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : null)
+      .catch(() => null);
+    return venuePriceDataPromise;
+  }
+
+  function scheduleCumulativePricePreviewPatch() {
+    window.cancelAnimationFrame(pricePatchFrame);
+    pricePatchFrame = window.requestAnimationFrame(async () => {
+      const preview = document.querySelector('#client-booking-price-preview');
+      if (!preview) return;
+      const tableCount = selectedBookingTableCount();
+      if (tableCount <= 0) return;
+      const venue = await loadVenuePriceData();
+      const price = calculateCumulativeTablePrice(venue, tableCount);
+      if (!price) return;
+      const signature = `${tableCount}:${price.amount}:${price.currency}`;
+      if (preview.dataset.cumulativePriceSignature === signature) return;
+      preview.dataset.cumulativePriceSignature = signature;
+      preview.innerHTML = `<strong>Итоговая предоплата:</strong> ${formatMoneyRu(price.amount, price.currency)}<br><span>${price.note}. Расчёт накопительный: стоимость не уменьшается при добавлении следующего стола.</span>`;
+    });
+  }
+
+  function polishBookingPricePreview(root) {
+    const scope = root || document;
+    if (!scope.querySelector('#client-booking-price-preview')) return;
+    scheduleCumulativePricePreviewPatch();
+  }
+
   function polishVenueDetailPage(root) {
     balanceVenueDetailColumns(root);
     polishVenueLayoutStage(root);
+    polishBookingPricePreview(root);
   }
 
   function boot() {
@@ -273,14 +391,28 @@
     polishVenueDetailPage(document);
     window.addEventListener('resize', () => scheduleResponsiveLayoutFit(document));
     window.addEventListener('orientationchange', () => scheduleResponsiveLayoutFit(document));
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('[data-table-id], #client-booking-type, #client-hall-select')) {
+        window.setTimeout(scheduleCumulativePricePreviewPatch, 0);
+      }
+    });
+    document.addEventListener('input', (event) => {
+      if (event.target.matches('#client-booking-table, #client-booking-type')) scheduleCumulativePricePreviewPatch();
+    });
+    document.addEventListener('change', (event) => {
+      if (event.target.matches('#client-booking-type, #client-hall-select')) scheduleCumulativePricePreviewPatch();
+    });
     const observer = new MutationObserver((mutations) => {
       if (mutations.some((mutation) => mutation.addedNodes && mutation.addedNodes.length)) {
         enhanceVenueCards(document);
         polishVenueDetailPage(document);
         scheduleResponsiveLayoutFit(document);
       }
+      if (mutations.some((mutation) => mutation.target && mutation.target.id === 'client-selected-table-inline')) {
+        scheduleCumulativePricePreviewPatch();
+      }
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
