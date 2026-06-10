@@ -23,12 +23,30 @@ def get_hold_minutes(rule) -> int:
 
 def expire_outdated_holds(*, table_id: int | None = None, customer_id: int | None = None) -> int:
     now = timezone.now()
-    qs = Booking.objects.filter(status=Booking.Status.HOLD, hold_expires_at__isnull=False, hold_expires_at__lte=now)
-    if table_id is not None:
-        qs = qs.filter(Q(table_id=table_id) | Q(tables__id=table_id)).distinct()
+    qs = Booking.objects.filter(
+        status=Booking.Status.HOLD,
+        hold_expires_at__isnull=False,
+        hold_expires_at__lte=now,
+    )
     if customer_id is not None:
         qs = qs.filter(customer_id=customer_id)
-    return qs.update(status=Booking.Status.CANCELLED, manager_comment='Резерв истёк автоматически после окончания выбранного слота', updated_at=now)
+    if table_id is not None:
+        # Filtering through Booking.tables creates duplicated rows and forces
+        # DISTINCT. Django cannot safely call update() on a distinct queryset,
+        # so resolve matching booking IDs first and update a clean queryset.
+        booking_ids = list(
+            qs.filter(Q(table_id=table_id) | Q(tables__id=table_id))
+            .values_list('id', flat=True)
+            .distinct()
+        )
+        if not booking_ids:
+            return 0
+        qs = Booking.objects.filter(id__in=booking_ids)
+    return qs.update(
+        status=Booking.Status.CANCELLED,
+        manager_comment='Резерв истёк автоматически после окончания выбранного слота',
+        updated_at=now,
+    )
 
 
 
