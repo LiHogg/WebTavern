@@ -5,6 +5,8 @@
   function qs(selector, root) { return (root || document).querySelector(selector); }
   function qsa(selector, root) { return Array.from((root || document).querySelectorAll(selector)); }
   function getToken() { return window.localStorage.getItem(TOKEN_KEY); }
+  function isManagerPage() { return window.location.pathname.startsWith('/manager'); }
+  function isAccountPage() { return window.location.pathname.startsWith('/account'); }
 
   async function parseApiResponse(response) {
     const text = await response.text();
@@ -120,6 +122,7 @@
   }
 
   function addManagerHoldConfirmButtons(root) {
+    if (!isManagerPage()) return;
     qsa('.booking-card', root).forEach((card) => {
       const text = statusText(card);
       if (!text.includes('зарезервировано')) return;
@@ -137,6 +140,7 @@
   }
 
   function addCustomerHoldAndPayButtons(root) {
+    if (!isAccountPage()) return;
     const accountRoot = qs('#account-active-bookings', root) || root;
     qsa('.booking-card', accountRoot).forEach((card) => {
       const text = statusText(card);
