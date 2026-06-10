@@ -7,6 +7,10 @@
   function getToken() { return window.localStorage.getItem(TOKEN_KEY); }
   function isManagerPage() { return window.location.pathname.startsWith('/manager'); }
   function isAccountPage() { return window.location.pathname.startsWith('/account'); }
+  function isVenueDetailPage() { return /^\/venues\/[^/]+\/?$/.test(window.location.pathname || ''); }
+  function show(el) { if (el) el.classList.remove('hidden'); }
+  function hide(el) { if (el) el.classList.add('hidden'); }
+  function setText(el, value) { if (el) el.textContent = value; }
 
   async function parseApiResponse(response) {
     const text = await response.text();
@@ -62,6 +66,13 @@
     node.textContent = text;
   }
 
+  function formatMoney(amount, currency) {
+    const value = Number(amount);
+    if (!Number.isFinite(value)) return `${amount || 0} ${currency || 'RUB'}`;
+    try { return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: currency || 'RUB' }).format(value); }
+    catch { return `${value.toFixed(2)} ${currency || 'RUB'}`; }
+  }
+
   async function confirmManagerBooking(bookingId, button) {
     button.disabled = true;
     try {
@@ -84,13 +95,6 @@
       setInlineMessage(card, error.message || 'Не удалось подтвердить резерв.', true);
       button.disabled = false;
     }
-  }
-
-  function formatMoney(amount, currency) {
-    const value = Number(amount);
-    if (!Number.isFinite(value)) return `${amount || 0} ${currency || 'RUB'}`;
-    try { return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: currency || 'RUB' }).format(value); }
-    catch { return `${value.toFixed(2)} ${currency || 'RUB'}`; }
   }
 
   async function completeDemoPayment(bookingId, button) {
@@ -170,9 +174,111 @@
     });
   }
 
+  function localDateTimeToIso(value) {
+    const date = new Date(String(value || ''));
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString();
+  }
+
+  function selectedTableIdsFromForm() {
+    const raw = String(qs('#client-booking-table')?.value || '').trim();
+    return raw.split(',').map((item) => Number(item)).filter((item) => Number.isFinite(item) && item > 0);
+  }
+
+  async function handleStableVenueBookingSubmit(event) {
+    if (!isVenueDetailPage()) return;
+    const form = event.target && event.target.closest ? event.target.closest('#client-booking-form') : null;
+    if (!form) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    const token = getToken();
+    const message = qs('#client-booking-message');
+    const error = qs('#client-booking-error');
+    const paymentActions = qs('#client-payment-actions');
+    const submit = qs('#client-booking-submit');
+    hide(message); hide(error); hide(paymentActions);
+
+    if (!token) {
+      setText(error, 'Сначала войдите в аккаунт клиента, затем повторите попытку.');
+      show(error);
+      return;
+    }
+
+    const slug = document.body.getAttribute('data-venue-slug');
+    const hallId = Number(qs('#client-hall-select')?.value || 0);
+    const bookingType = String(qs('#client-booking-type')?.value || 'tables');
+    const startIso = localDateTimeToIso(qs('#client-booking-start')?.value);
+    const endIso = localDateTimeToIso(qs('#client-booking-end')?.value);
+    const tableIds = selectedTableIdsFromForm();
+    const guests = Math.max(Number(qs('#client-booking-guests')?.value || 1), 1);
+    const comment = String(qs('#client-booking-comment')?.value || '').trim();
+
+    if (!slug || !hallId || !startIso || !endIso) {
+      setText(error, 'Проверьте зал, дату и время бронирования.');
+      show(error);
+      return;
+    }
+    if (bookingType !== 'hall' && !tableIds.length) {
+      setText(error, 'Выберите хотя бы один свободный стол.');
+      show(error);
+      return;
+    }
+
+    if (submit) submit.disabled = true;
+    try {
+      const venue = await apiRequest(`/venues/${encodeURIComponent(slug)}/?booking_start=${encodeURIComponent(startIso)}&booking_end=${encodeURIComponent(endIso)}`);
+      const hall = (Array.isArray(venue.halls) ? venue.halls : []).find((item) => Number(item.id) === hallId);
+      const hallTables = Array.isArray(hall && hall.tables) ? hall.tables.filter((table) => table.is_active !== false) : [];
+      const selectedTables = bookingType === 'hall'
+        ? hallTables
+        : hallTables.filter((table) => tableIds.includes(Number(table.id)));
+      const freeTables = selectedTables.filter((table) => !(table.occupancy && (table.occupancy.state === 'occupied' || table.occupancy.state === 'held_by_you')));
+
+      if (!selectedTables.length || freeTables.length !== selectedTables.length) {
+        throw new Error('Один или несколько выбранных столов уже недоступны. Обновите интервал и выберите столы заново.');
+      }
+
+      const hold = await apiRequest('/bookings/hold/', {
+        method: 'POST',
+        body: {
+          venue: venue.id,
+          hall: hallId,
+          table: selectedTables[0].id,
+          tables: selectedTables.map((table) => table.id),
+          booking_type: bookingType,
+          guests_count: guests,
+          booking_start: startIso,
+          booking_end: endIso,
+          customer_comment: comment,
+        },
+      });
+
+      setText(message, `Бронь #${hold.id} создана. Выбранные столы зарезервированы на слот. Менеджер подтвердит бронь, после этого оплата появится в профиле клиента.`);
+      show(message);
+      if (qs('#client-booking-comment')) qs('#client-booking-comment').value = '';
+      if (qs('#client-booking-table')) qs('#client-booking-table').value = '';
+      window.setTimeout(() => window.location.href = `/account/?booking=${encodeURIComponent(hold.id)}#booking-${encodeURIComponent(hold.id)}`, 1200);
+    } catch (err) {
+      setText(error, err.message || 'Не удалось создать бронь. Проверьте доступность столов и повторите попытку.');
+      show(error);
+      if (submit) submit.disabled = false;
+    }
+  }
+
+  function bindStableVenueBookingSubmit(root) {
+    if (!isVenueDetailPage()) return;
+    const form = qs('#client-booking-form', root || document);
+    if (!form || form.dataset.stableBookingSubmitBound === 'true') return;
+    form.dataset.stableBookingSubmitBound = 'true';
+    form.addEventListener('submit', handleStableVenueBookingSubmit, true);
+  }
+
   function patchBookingActions() {
     addManagerHoldConfirmButtons(document);
     addCustomerHoldAndPayButtons(document);
+    bindStableVenueBookingSubmit(document);
   }
 
   function schedulePatch() {
