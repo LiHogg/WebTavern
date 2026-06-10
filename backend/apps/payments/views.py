@@ -93,6 +93,10 @@ def _apply_payment_state(payment: Payment, new_status: str, *, actor=None, reaso
     return payment, booking
 
 
+def _user_is_booking_customer(user, booking):
+    return bool(user and user.is_authenticated and booking.customer_id == user.id)
+
+
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PaymentSerializer
 
@@ -125,8 +129,8 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         payment = self.get_object()
         booking = payment.booking
 
-        if booking.customer_id != request.user.id and not user_can_manage_venue(request.user, booking.venue):
-            return response.Response({'detail': 'Недостаточно прав.'}, status=403)
+        if not _user_is_booking_customer(request.user, booking):
+            return response.Response({'detail': 'Оплатить бронь может только клиент, который её создал.'}, status=403)
 
         if booking.status == Booking.Status.PAID and payment.status == Payment.Status.SUCCEEDED:
             return response.Response(self.get_serializer(payment).data)
@@ -134,18 +138,18 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         if booking.status != Booking.Status.WAITING_FOR_PAYMENT:
             return response.Response({'detail': 'Эту бронь сейчас нельзя оплатить.'}, status=400)
 
-        payment, _ = _apply_payment_state(payment, Payment.Status.SUCCEEDED, actor=request.user, reason='Предоплата успешно внесена')
+        payment, _ = _apply_payment_state(payment, Payment.Status.SUCCEEDED, actor=request.user, reason='Предоплата успешно внесена клиентом')
         return response.Response(self.get_serializer(payment).data, status=status.HTTP_200_OK)
 
     @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='simulate-cancel')
     def simulate_cancel(self, request, pk=None):
         payment = self.get_object()
         booking = payment.booking
-        if booking.customer_id != request.user.id and not user_can_manage_venue(request.user, booking.venue):
-            return response.Response({'detail': 'Недостаточно прав.'}, status=403)
+        if not _user_is_booking_customer(request.user, booking):
+            return response.Response({'detail': 'Отменить учебную оплату может только клиент, который создал бронь.'}, status=403)
         if booking.status != Booking.Status.WAITING_FOR_PAYMENT:
             return response.Response({'detail': 'Эту оплату сейчас нельзя отменить.'}, status=400)
-        payment, _ = _apply_payment_state(payment, Payment.Status.CANCELLED, actor=request.user, reason='Пользователь прервал учебную оплату')
+        payment, _ = _apply_payment_state(payment, Payment.Status.CANCELLED, actor=request.user, reason='Клиент прервал учебную оплату')
         return response.Response(self.get_serializer(payment).data, status=status.HTTP_200_OK)
 
 
@@ -161,8 +165,8 @@ def initialize_payment(request):
     except Booking.DoesNotExist:
         return response.Response({'detail': 'Бронь не найдена.'}, status=404)
 
-    if booking.customer_id != request.user.id and not user_can_manage_venue(request.user, booking.venue):
-        return response.Response({'detail': 'Недостаточно прав.'}, status=403)
+    if not _user_is_booking_customer(request.user, booking):
+        return response.Response({'detail': 'Запустить оплату может только клиент, который создал бронь.'}, status=403)
 
     booking.refresh_from_db()
     if booking.status == Booking.Status.CANCELLED:
