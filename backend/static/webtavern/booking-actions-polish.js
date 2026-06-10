@@ -85,18 +85,6 @@
     }
   }
 
-  async function confirmCustomerHold(bookingId, button) {
-    button.disabled = true;
-    try {
-      await apiRequest(`/bookings/${bookingId}/confirm-hold/`, { method: 'POST', body: {} });
-      window.location.reload();
-    } catch (error) {
-      const card = button.closest('.booking-card') || button.closest('article') || document.body;
-      setInlineMessage(card, error.message || 'Не удалось подтвердить резерв.', true);
-      button.disabled = false;
-    }
-  }
-
   async function completeDemoPayment(bookingId, button) {
     button.disabled = true;
     try {
@@ -143,7 +131,7 @@
     });
   }
 
-  function addCustomerHoldAndPayButtons(root) {
+  function addCustomerPayButtons(root) {
     if (!isAccountPage()) return;
     const accountRoot = qs('#account-active-bookings', root) || root;
     qsa('.booking-card', accountRoot).forEach((card) => {
@@ -151,15 +139,6 @@
       const bookingId = bookingIdFromCard(card);
       const row = qs('.button-row', card);
       if (!bookingId || !row) return;
-
-      if (text.includes('зарезервировано') && !qs('.account-booking-confirm-hold', card)) {
-        const button = document.createElement('button');
-        button.className = 'button button-primary account-booking-confirm-hold';
-        button.type = 'button';
-        button.textContent = 'Подтвердить резерв';
-        button.addEventListener('click', () => confirmCustomerHold(bookingId, button));
-        row.insertAdjacentElement('afterbegin', button);
-      }
 
       if (text.includes('ожидает оплаты') && !qs('.account-booking-pay, .account-booking-pay-polish', card)) {
         const button = document.createElement('button');
@@ -277,7 +256,7 @@
 
   function patchBookingActions() {
     addManagerHoldConfirmButtons(document);
-    addCustomerHoldAndPayButtons(document);
+    addCustomerPayButtons(document);
     bindStableVenueBookingSubmit(document);
   }
 
