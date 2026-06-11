@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import decorators, permissions, response, viewsets
@@ -5,6 +6,15 @@ from rest_framework import decorators, permissions, response, viewsets
 from .models import Notification, NotificationDelivery
 from .serializers import NotificationDeliverySerializer, NotificationPreferenceSerializer, NotificationSerializer
 from .services import create_notification, get_notification_preference
+
+
+def _mask_value(value: str) -> str:
+    value = str(value or '').strip()
+    if not value:
+        return ''
+    if len(value) <= 8:
+        return '*' * len(value)
+    return f'{value[:4]}...{value[-4:]}'
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
@@ -75,6 +85,41 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     def deliveries(self, request):
         queryset = NotificationDelivery.objects.filter(recipient=request.user).select_related('notification').order_by('-created_at')[:30]
         return response.Response(NotificationDeliverySerializer(queryset, many=True).data)
+
+    @decorators.action(detail=False, methods=['get'], url_path='diagnostics')
+    def diagnostics(self, request):
+        preference = get_notification_preference(request.user)
+        deliveries = NotificationDelivery.objects.filter(recipient=request.user).select_related('notification').order_by('-created_at')[:10]
+        return response.Response({
+            'project': {
+                'email_enabled': bool(getattr(settings, 'ENABLE_EMAIL_NOTIFICATIONS', False)),
+                'email_backend': str(getattr(settings, 'EMAIL_BACKEND', '') or ''),
+                'email_host': str(getattr(settings, 'EMAIL_HOST', '') or ''),
+                'email_port': getattr(settings, 'EMAIL_PORT', ''),
+                'email_user': str(getattr(settings, 'EMAIL_HOST_USER', '') or ''),
+                'email_password_set': bool(getattr(settings, 'EMAIL_HOST_PASSWORD', '')),
+                'email_use_ssl': bool(getattr(settings, 'EMAIL_USE_SSL', False)),
+                'email_use_tls': bool(getattr(settings, 'EMAIL_USE_TLS', False)),
+                'default_from_email': str(getattr(settings, 'DEFAULT_FROM_EMAIL', '') or ''),
+                'email_recipient_override': str(getattr(settings, 'EMAIL_RECIPIENT_OVERRIDE', '') or ''),
+                'sms_enabled': bool(getattr(settings, 'ENABLE_SMS_NOTIFICATIONS', False)),
+                'sms_provider': str(getattr(settings, 'SMS_PROVIDER', '') or ''),
+                'smsru_api_id_set': bool(getattr(settings, 'SMSRU_API_ID', '')),
+                'smsru_api_id_masked': _mask_value(getattr(settings, 'SMSRU_API_ID', '')),
+                'sms_from': str(getattr(settings, 'SMS_FROM', '') or ''),
+                'sms_ru_use_sender': bool(getattr(settings, 'SMS_RU_USE_SENDER', False)),
+                'sms_max_length': getattr(settings, 'SMS_MAX_LENGTH', ''),
+                'public_site_url': str(getattr(settings, 'PUBLIC_SITE_URL', '') or ''),
+            },
+            'user': {
+                'email': getattr(request.user, 'email', '') or '',
+                'phone': getattr(request.user, 'phone', '') or '',
+                'has_email': bool(getattr(request.user, 'email', '') or ''),
+                'has_phone': bool(getattr(request.user, 'phone', '') or ''),
+            },
+            'preferences': NotificationPreferenceSerializer(preference).data,
+            'recent_deliveries': NotificationDeliverySerializer(deliveries, many=True).data,
+        })
 
     @decorators.action(detail=False, methods=['post'], url_path='test-channels')
     def test_channels(self, request):
