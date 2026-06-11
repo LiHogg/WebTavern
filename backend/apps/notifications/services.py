@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from urllib import parse, request as urlrequest
 
 from asgiref.sync import async_to_sync
@@ -121,7 +122,8 @@ def _sms_text(notification: Notification) -> str:
     title = ' '.join(str(notification.title or '').split())
     message = ' '.join(str(notification.message or '').split())
     text = f'WebTavern: {title}. {message}'.strip()
-    max_length = int(getattr(settings, 'SMS_MAX_LENGTH', 120) or 120)
+    configured_length = os.getenv('SMS_MAX_LENGTH', getattr(settings, 'SMS_MAX_LENGTH', 120))
+    max_length = int(configured_length or 120)
     if len(text) > max_length:
         return text[: max_length - 3] + '...'
     return text
@@ -145,7 +147,8 @@ def _send_sms_via_smsru(phone: str, text: str) -> tuple[bool, str, str]:
 
     # SMS.RU rejects unregistered sender names. In demo mode it is safer not to
     # pass the sender unless the owner explicitly enabled it in env.
-    use_sender = str(getattr(settings, 'SMS_RU_USE_SENDER', 'false') or 'false').lower() in {'1', 'true', 'yes', 'on'}
+    configured_sender_flag = os.getenv('SMS_RU_USE_SENDER', getattr(settings, 'SMS_RU_USE_SENDER', 'false'))
+    use_sender = str(configured_sender_flag or 'false').lower() in {'1', 'true', 'yes', 'on'}
     sender = str(getattr(settings, 'SMS_FROM', '') or '').strip()
     if use_sender and sender:
         payload_data['from'] = sender
