@@ -112,9 +112,18 @@ def send_email_notification(notification: Notification) -> NotificationDelivery:
 
 
 def _sms_text(notification: Notification) -> str:
-    text = f'{notification.title}. {notification.message}'
-    if len(text) > 320:
-        return text[:317] + '...'
+    """Build a short SMS text.
+
+    SMS.RU bills long Cyrillic messages as several SMS segments, so booking
+    messages are intentionally compact. The full text and link stay available in
+    the in-app notification and email copy.
+    """
+    title = ' '.join(str(notification.title or '').split())
+    message = ' '.join(str(notification.message or '').split())
+    text = f'WebTavern: {title}. {message}'.strip()
+    max_length = int(getattr(settings, 'SMS_MAX_LENGTH', 120) or 120)
+    if len(text) > max_length:
+        return text[: max_length - 3] + '...'
     return text
 
 
@@ -122,22 +131,40 @@ def _send_sms_via_smsru(phone: str, text: str) -> tuple[bool, str, str]:
     api_id = getattr(settings, 'SMSRU_API_ID', '')
     if not api_id:
         return False, '', 'SMSRU_API_ID не указан.'
-    payload = parse.urlencode({
+
+    phone_digits = ''.join(ch for ch in phone if ch.isdigit())
+    if not phone_digits:
+        return False, '', 'Телефон не содержит цифр.'
+
+    payload_data = {
         'api_id': api_id,
-        'to': ''.join(ch for ch in phone if ch.isdigit()),
+        'to': phone_digits,
         'msg': text,
         'json': 1,
-        'from': getattr(settings, 'SMS_FROM', ''),
-    }).encode('utf-8')
+    }
+
+    # SMS.RU rejects unregistered sender names. In demo mode it is safer not to
+    # pass the sender unless the owner explicitly enabled it in env.
+    use_sender = str(getattr(settings, 'SMS_RU_USE_SENDER', 'false') or 'false').lower() in {'1', 'true', 'yes', 'on'}
+    sender = str(getattr(settings, 'SMS_FROM', '') or '').strip()
+    if use_sender and sender:
+        payload_data['from'] = sender
+
+    payload = parse.urlencode(payload_data).encode('utf-8')
     timeout = int(getattr(settings, 'SMS_TIMEOUT_SECONDS', 10) or 10)
     req = urlrequest.Request('https://sms.ru/sms/send', data=payload, method='POST')
     with urlrequest.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read().decode('utf-8'))
-    if data.get('status') == 'OK':
-        sms_data = data.get('sms') or {}
-        first = next(iter(sms_data.values()), {}) if isinstance(sms_data, dict) else {}
-        return True, str(first.get('sms_id', '') or ''), ''
-    return False, '', str(data.get('status_text') or data)
+
+    if data.get('status') != 'OK':
+        return False, '', str(data.get('status_text') or data)
+
+    sms_data = data.get('sms') or {}
+    first = next(iter(sms_data.values()), {}) if isinstance(sms_data, dict) else {}
+    if first and first.get('status') != 'OK':
+        return False, str(first.get('sms_id', '') or ''), str(first.get('status_text') or first)
+
+    return True, str(first.get('sms_id', '') or ''), ''
 
 
 def _send_sms_via_webhook(phone: str, text: str) -> tuple[bool, str, str]:
@@ -154,7 +181,7 @@ def _send_sms_via_webhook(phone: str, text: str) -> tuple[bool, str, str]:
 
 def send_sms_notification(notification: Notification) -> NotificationDelivery:
     destination = getattr(notification.recipient, 'phone', '') or ''
-    provider = getattr(settings, 'SMS_PROVIDER', 'console') or 'console'
+    provider = str(getattr(settings, 'SMS_PROVIDER', 'console') or 'console').strip().lower()
     if not getattr(settings, 'ENABLE_SMS_NOTIFICATIONS', True):
         return _delivery_status(NotificationDelivery.Channel.SMS, NotificationDelivery.Status.SKIPPED, notification, provider=provider, destination=destination, error='SMS-уведомления отключены в настройках проекта.')
     if not destination:
@@ -243,7 +270,7 @@ def broadcast_notification(payload: dict, venue_id: int | None = None, user_id: 
         for group_name in groups:
             async_to_sync(channel_layer.group_send)(group_name, {'type': 'broadcast_notification', 'payload': payload})
     except Exception:
-        logger.exception('Realtime notification broadcast failed')
+        logger.exception('Realtime notification failed')
 
 
 def _iso_datetime(value):
