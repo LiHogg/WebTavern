@@ -185,7 +185,10 @@ EMAIL_ADD_OVERRIDE_NOTE = os.getenv("EMAIL_ADD_OVERRIDE_NOTE", "true").lower() =
 ENABLE_SMS_NOTIFICATIONS = os.getenv("ENABLE_SMS_NOTIFICATIONS", "true").lower() == "true"
 SMS_PROVIDER = os.getenv("SMS_PROVIDER", "console").strip().lower()
 SMS_FROM = os.getenv("SMS_FROM", "WebTavern")
-SMSRU_API_ID = os.getenv("SMSRU_API_ID", "")
+SMSRU_API_ID = os.getenv("SMSRU_API_ID", os.getenv("SMS_RU_API_ID", ""))
+SMS_RU_API_ID = SMSRU_API_ID
+SMS_RU_USE_SENDER = os.getenv("SMS_RU_USE_SENDER", "false").lower() in {"1", "true", "yes", "on"}
+SMS_MAX_LENGTH = int(os.getenv("SMS_MAX_LENGTH", "120") or 120)
 SMS_WEBHOOK_URL = os.getenv("SMS_WEBHOOK_URL", "")
 SMS_TIMEOUT_SECONDS = int(os.getenv("SMS_TIMEOUT_SECONDS", "10"))
 PUBLIC_SITE_URL = os.getenv("PUBLIC_SITE_URL", "http://localhost:8080")
