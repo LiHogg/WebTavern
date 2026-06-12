@@ -4,6 +4,10 @@
   const pageId = document.body ? document.body.getAttribute('data-page') : '';
   if (pageId !== 'notifications') return;
 
+  let isRenderingCompactList = false;
+  let reloadTimer = null;
+  let observerStarted = false;
+
   function qs(selector, root) { return (root || document).querySelector(selector); }
   function qsa(selector, root) { return Array.from((root || document).querySelectorAll(selector)); }
   function show(el) { if (el) el.classList.remove('hidden'); }
@@ -120,47 +124,57 @@
     if (!listRoot) return;
 
     const items = [...notifications].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    if (!items.length) {
-      listRoot.innerHTML = '';
-      if (caption) caption.textContent = 'Уведомлений пока нет.';
-      if (empty) show(empty);
-      return;
+    isRenderingCompactList = true;
+    try {
+      if (!items.length) {
+        listRoot.innerHTML = '';
+        listRoot.setAttribute('data-notifications-compact-rendered', 'true');
+        if (caption) caption.textContent = 'Уведомлений пока нет.';
+        if (empty) show(empty);
+        return;
+      }
+
+      if (empty) hide(empty);
+      const unread = items.filter((item) => !item.is_read);
+      const visible = unread.length ? unread.slice(0, 10) : items.slice(0, 5);
+      const visibleIds = new Set(visible.map((item) => item.id));
+      const hiddenItems = items.filter((item) => !visibleIds.has(item.id));
+      const modeText = unread.length
+        ? `Показаны последние ${visible.length} непрочитанных уведомлений. Остальные скрыты в раскрывающемся списке.`
+        : `Все уведомления прочитаны. Показаны ${visible.length} последних, остальные скрыты.`;
+
+      if (caption) caption.textContent = modeText;
+      listRoot.innerHTML = `
+        <div class="notifications-compact-visible">
+          ${visible.map(renderCompactNotificationCard).join('')}
+        </div>
+        ${hiddenItems.length ? `
+          <details class="notifications-hidden-list">
+            <summary>Показать остальные уведомления: ${hiddenItems.length}</summary>
+            <div class="page-stack top-gap">
+              ${hiddenItems.map(renderCompactNotificationCard).join('')}
+            </div>
+          </details>
+        ` : ''}
+      `;
+      listRoot.setAttribute('data-notifications-compact-rendered', 'true');
+      bindOpenHandlers(listRoot);
+    } finally {
+      window.setTimeout(() => { isRenderingCompactList = false; }, 0);
     }
-
-    if (empty) hide(empty);
-    const unread = items.filter((item) => !item.is_read);
-    const visible = unread.length ? unread.slice(0, 10) : items.slice(0, 5);
-    const visibleIds = new Set(visible.map((item) => item.id));
-    const hiddenItems = items.filter((item) => !visibleIds.has(item.id));
-    const modeText = unread.length
-      ? `Показаны последние ${visible.length} непрочитанных уведомлений. Остальные скрыты в раскрывающемся списке.`
-      : `Все уведомления прочитаны. Показаны 5 последних, остальные скрыты.`;
-
-    if (caption) caption.textContent = modeText;
-    listRoot.innerHTML = `
-      <div class="notifications-compact-visible">
-        ${visible.map(renderCompactNotificationCard).join('')}
-      </div>
-      ${hiddenItems.length ? `
-        <details class="notifications-hidden-list">
-          <summary>Показать остальные уведомления: ${hiddenItems.length}</summary>
-          <div class="page-stack top-gap">
-            ${hiddenItems.map(renderCompactNotificationCard).join('')}
-          </div>
-        </details>
-      ` : ''}
-    `;
-    bindOpenHandlers(listRoot);
   }
   async function markVisiblePageAsReadIfNeeded(notifications) {
     const hasUnread = notifications.some((item) => !item.is_read);
-    if (!hasUnread) return;
+    if (!hasUnread) return false;
     try {
       await apiRequest('/notifications/mark_all_read/', { method: 'POST', body: {} });
       await refreshSummary();
-    } catch (_) {}
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
-  async function loadCompactNotifications() {
+  async function loadCompactNotifications(options = {}) {
     const listRoot = qs('#notifications-list');
     const error = qs('#notifications-error');
     if (!listRoot || !getToken()) return;
@@ -169,7 +183,10 @@
       const payload = await apiRequest('/notifications/');
       const notifications = normalizeList(payload);
       renderCompactList(notifications);
-      await markVisiblePageAsReadIfNeeded(notifications);
+      const marked = await markVisiblePageAsReadIfNeeded(notifications);
+      if (marked && options.reloadAfterRead !== false) {
+        window.setTimeout(() => loadCompactNotifications({ reloadAfterRead: false }), 450);
+      }
     } catch (err) {
       if (error) {
         error.textContent = err.message || 'Не удалось загрузить уведомления.';
@@ -177,13 +194,33 @@
       }
     }
   }
+  function scheduleCompactReload(delay = 180) {
+    if (reloadTimer) window.clearTimeout(reloadTimer);
+    reloadTimer = window.setTimeout(() => {
+      reloadTimer = null;
+      loadCompactNotifications();
+    }, delay);
+  }
+  function startCompactObserver() {
+    const listRoot = qs('#notifications-list');
+    if (!listRoot || observerStarted) return;
+    observerStarted = true;
+    const observer = new MutationObserver(() => {
+      if (isRenderingCompactList) return;
+      const hasCompactMarkup = !!qs('.notifications-compact-visible, .notifications-hidden-list', listRoot);
+      if (!hasCompactMarkup) scheduleCompactReload(120);
+    });
+    observer.observe(listRoot, { childList: true, subtree: false });
+  }
   function simplifyNotificationControls() {
     const readAll = qs('#notifications-read-all');
     const refresh = qs('#notifications-refresh');
     if (readAll) hide(readAll);
     if (refresh) {
-      refresh.textContent = 'Обновить список';
-      refresh.addEventListener('click', function (event) {
+      const cleanRefresh = refresh.cloneNode(true);
+      cleanRefresh.textContent = 'Обновить список';
+      refresh.replaceWith(cleanRefresh);
+      cleanRefresh.addEventListener('click', function (event) {
         event.preventDefault();
         loadCompactNotifications();
       });
@@ -193,8 +230,16 @@
     const dashboard = qs('#notifications-dashboard');
     if (!dashboard) return;
     simplifyNotificationControls();
-    window.setTimeout(loadCompactNotifications, 650);
+    startCompactObserver();
+    window.setTimeout(() => loadCompactNotifications(), 150);
+    window.setTimeout(() => loadCompactNotifications(), 900);
+    window.setTimeout(() => loadCompactNotifications(), 1800);
   }
+
+  window.WebTavernNotificationsCompact = {
+    reload: loadCompactNotifications,
+    scheduleReload: scheduleCompactReload
+  };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
