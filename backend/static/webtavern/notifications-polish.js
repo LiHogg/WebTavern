@@ -7,6 +7,8 @@
   let isRenderingCompactList = false;
   let reloadTimer = null;
   let observerStarted = false;
+  let pageObserverStarted = false;
+  let deliveryCompactTimer = null;
 
   function qs(selector, root) { return (root || document).querySelector(selector); }
   function qsa(selector, root) { return Array.from((root || document).querySelectorAll(selector)); }
@@ -187,6 +189,7 @@
       if (marked && options.reloadAfterRead !== false) {
         window.setTimeout(() => loadCompactNotifications({ reloadAfterRead: false }), 450);
       }
+      scheduleDeliveryCompact(180);
     } catch (err) {
       if (error) {
         error.textContent = err.message || 'Не удалось загрузить уведомления.';
@@ -194,11 +197,78 @@
       }
     }
   }
+
+  function normalizeText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+  function findDeliverySection() {
+    const roots = qsa('section.card, article.card, .card').filter((node) => {
+      const text = normalizeText(node.textContent);
+      return text.includes('email/sms отправки') || text.includes('журнал доставки') || text.includes('последние отправки');
+    });
+    return roots.sort((a, b) => a.textContent.length - b.textContent.length)[0] || null;
+  }
+  function findDeliveryListRoot(section) {
+    if (!section) return null;
+    const byId = qsa('[id*="deliver"], [data-deliveries-list]', section)
+      .find((node) => qsa('article, .subcard, .compact-card, .delivery-card, [data-delivery-id]', node).length >= 2);
+    if (byId) return byId;
+    const stacks = qsa('.page-stack, .list-stack, .notifications-list', section)
+      .filter((node) => qsa('article, .subcard, .compact-card, .delivery-card, [data-delivery-id]', node).length >= 2);
+    if (stacks.length) return stacks.sort((a, b) => b.children.length - a.children.length)[0];
+    return section;
+  }
+  function getDeliveryCards(root) {
+    if (!root) return [];
+    const nodes = qsa('[data-delivery-id], .delivery-card, .notification-delivery-card, .notification-delivery, article, .subcard', root)
+      .filter((node) => !node.closest('.notifications-delivery-hidden') && !node.matches('details, summary'))
+      .filter((node) => node !== root)
+      .filter((node) => {
+        const text = normalizeText(node.textContent);
+        return text.includes('email') || text.includes('sms') || text.includes('smtp') || text.includes('smsru') || text.includes('отправ') || text.includes('ошиб');
+      });
+    return nodes.filter((node, index, list) => !list.some((other, otherIndex) => otherIndex !== index && other.contains(node)));
+  }
+  function compactDeliveryJournal() {
+    const section = findDeliverySection();
+    const root = findDeliveryListRoot(section);
+    if (!root) return;
+
+    qsa('.notifications-delivery-hidden', root).forEach((details) => {
+      const nestedCards = qsa('[data-delivery-id], .delivery-card, .notification-delivery-card, .notification-delivery, article, .subcard', details);
+      nestedCards.forEach((card) => root.insertBefore(card, details));
+      details.remove();
+    });
+
+    const cards = getDeliveryCards(root);
+    if (cards.length <= 5) {
+      root.setAttribute('data-deliveries-compact-rendered', 'true');
+      return;
+    }
+
+    const hiddenCards = cards.slice(5);
+    const details = document.createElement('details');
+    details.className = 'notifications-hidden-list notifications-delivery-hidden';
+    details.innerHTML = `<summary>Показать старые Email/SMS отправки: ${hiddenCards.length}</summary><div class="page-stack top-gap"></div>`;
+    const hiddenRoot = qs('.page-stack', details);
+    hiddenCards.forEach((card) => hiddenRoot.appendChild(card));
+    const lastVisible = cards[4];
+    lastVisible.after(details);
+    root.setAttribute('data-deliveries-compact-rendered', 'true');
+  }
+  function scheduleDeliveryCompact(delay = 120) {
+    if (deliveryCompactTimer) window.clearTimeout(deliveryCompactTimer);
+    deliveryCompactTimer = window.setTimeout(() => {
+      deliveryCompactTimer = null;
+      compactDeliveryJournal();
+    }, delay);
+  }
   function scheduleCompactReload(delay = 180) {
     if (reloadTimer) window.clearTimeout(reloadTimer);
     reloadTimer = window.setTimeout(() => {
       reloadTimer = null;
       loadCompactNotifications();
+      scheduleDeliveryCompact(220);
     }, delay);
   }
   function startCompactObserver() {
@@ -212,6 +282,21 @@
     });
     observer.observe(listRoot, { childList: true, subtree: false });
   }
+  function startPageObserver() {
+    const dashboard = qs('#notifications-dashboard');
+    if (!dashboard || pageObserverStarted) return;
+    pageObserverStarted = true;
+    const observer = new MutationObserver((mutations) => {
+      if (isRenderingCompactList) return;
+      const deliveryChanged = mutations.some((mutation) => Array.from(mutation.addedNodes || []).some((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const text = normalizeText(node.textContent);
+        return text.includes('email') || text.includes('sms') || text.includes('отправ') || text.includes('ошиб');
+      }));
+      if (deliveryChanged) scheduleDeliveryCompact(120);
+    });
+    observer.observe(dashboard, { childList: true, subtree: true });
+  }
   function simplifyNotificationControls() {
     const readAll = qs('#notifications-read-all');
     const refresh = qs('#notifications-refresh');
@@ -223,6 +308,7 @@
       cleanRefresh.addEventListener('click', function (event) {
         event.preventDefault();
         loadCompactNotifications();
+        scheduleDeliveryCompact(220);
       });
     }
   }
@@ -231,14 +317,19 @@
     if (!dashboard) return;
     simplifyNotificationControls();
     startCompactObserver();
+    startPageObserver();
     window.setTimeout(() => loadCompactNotifications(), 150);
     window.setTimeout(() => loadCompactNotifications(), 900);
     window.setTimeout(() => loadCompactNotifications(), 1800);
+    window.setTimeout(() => compactDeliveryJournal(), 350);
+    window.setTimeout(() => compactDeliveryJournal(), 1200);
+    window.setTimeout(() => compactDeliveryJournal(), 2400);
   }
 
   window.WebTavernNotificationsCompact = {
     reload: loadCompactNotifications,
-    scheduleReload: scheduleCompactReload
+    scheduleReload: scheduleCompactReload,
+    compactDeliveries: compactDeliveryJournal
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
