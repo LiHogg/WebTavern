@@ -165,7 +165,12 @@ CHANNEL_LAYERS = {
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+_raw_email_backend = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_FORCE_IPV4 = os.getenv("EMAIL_FORCE_IPV4", "true").lower() in {"1", "true", "yes", "on"}
+if EMAIL_FORCE_IPV4 and _raw_email_backend == "django.core.mail.backends.smtp.EmailBackend":
+    EMAIL_BACKEND = "apps.notifications.email_backends.IPv4SMTPEmailBackend"
+else:
+    EMAIL_BACKEND = _raw_email_backend
 EMAIL_HOST = os.getenv("EMAIL_HOST", "mailhog")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "1025"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
