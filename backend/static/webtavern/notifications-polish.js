@@ -4,10 +4,13 @@
   const pageId = document.body ? document.body.getAttribute('data-page') : '';
   if (pageId !== 'notifications') return;
 
+  const MIN_RELOAD_GAP_MS = 2500;
   let rendering = false;
   let reloadTimer = null;
   let readMarkedOnce = false;
-  let observerStarted = false;
+  let reloading = false;
+  let queuedReload = false;
+  let lastReloadStartedAt = 0;
 
   function qs(selector, root) { return (root || document).querySelector(selector); }
   function qsa(selector, root) { return Array.from((root || document).querySelectorAll(selector)); }
@@ -53,7 +56,10 @@
     if (text) {
       try { payload = JSON.parse(text); } catch (_) { payload = null; }
     }
-    if (!response.ok) throw new Error(payload?.detail || payload?.error || `Request failed: ${response.status}`);
+    if (!response.ok) {
+      if (response.status >= 502) throw new Error('Сервер временно недоступен. Подождите несколько секунд и обновите страницу.');
+      throw new Error(payload?.detail || payload?.error || `Request failed: ${response.status}`);
+    }
     return payload;
   }
 
@@ -332,7 +338,7 @@
       if (button) button.disabled = true;
       await apiRequest('/notifications/test-channels/', { method: 'POST', body: {} });
       if (prefMessage) { prefMessage.textContent = 'Тестовое уведомление создано. Проверьте журнал отправок ниже.'; show(prefMessage); }
-      await reload();
+      scheduleReload(900);
     } catch (err) {
       if (prefError) { prefError.textContent = err.message || 'Не удалось отправить тестовое уведомление.'; show(prefError); }
     } finally {
@@ -360,7 +366,7 @@
     if (dashboard) show(dashboard);
     if (readAll) hide(readAll);
 
-    cloneAndBind('#notifications-refresh', reload, 'Обновить список');
+    cloneAndBind('#notifications-refresh', () => scheduleReload(300), 'Обновить список');
     cloneAndBind('#notifications-save-preferences', savePreferences);
     cloneAndBind('#notifications-test-channels', sendTestChannels);
 
@@ -368,11 +374,11 @@
       const control = qs(selector);
       if (!control || control.dataset.mainNotificationsBound === 'true') return;
       control.dataset.mainNotificationsBound = 'true';
-      control.addEventListener('change', () => loadNotifications());
+      control.addEventListener('change', () => scheduleReload(300));
     });
   }
 
-  function scheduleReload(delay = 180) {
+  function scheduleReload(delay = 600) {
     if (reloadTimer) window.clearTimeout(reloadTimer);
     reloadTimer = window.setTimeout(() => {
       reloadTimer = null;
@@ -381,33 +387,36 @@
   }
 
   async function reload() {
-    await Promise.all([loadNotifications(), loadDeliveries(), loadPreferences()]);
-  }
-
-  function startObserver() {
-    const dashboard = qs('#notifications-dashboard');
-    if (!dashboard || observerStarted) return;
-    observerStarted = true;
-    const observer = new MutationObserver((mutations) => {
-      if (rendering) return;
-      const important = mutations.some((mutation) => Array.from(mutation.addedNodes || []).some((node) => {
-        if (!(node instanceof HTMLElement)) return false;
-        if (node.closest && (node.closest('.notifications-hidden-list') || node.closest('[data-main-notification-card]') || node.closest('[data-main-delivery-card]'))) return false;
-        const text = String(node.textContent || '').toLowerCase();
-        return text.includes('уведом') || text.includes('email') || text.includes('sms') || text.includes('отправ') || text.includes('ошиб');
-      }));
-      if (important) scheduleReload(140);
-    });
-    observer.observe(dashboard, { childList: true, subtree: true });
+    if (!getToken()) return;
+    const now = Date.now();
+    if (reloading) {
+      queuedReload = true;
+      return;
+    }
+    const gap = now - lastReloadStartedAt;
+    if (gap < MIN_RELOAD_GAP_MS) {
+      scheduleReload(MIN_RELOAD_GAP_MS - gap + 150);
+      return;
+    }
+    reloading = true;
+    lastReloadStartedAt = now;
+    document.body.setAttribute('data-notifications-main-refreshing', 'true');
+    try {
+      await Promise.all([loadNotifications(), loadDeliveries(), loadPreferences()]);
+    } finally {
+      reloading = false;
+      document.body.setAttribute('data-notifications-main-refreshing', 'false');
+      if (queuedReload) {
+        queuedReload = false;
+        scheduleReload(900);
+      }
+    }
   }
 
   function start() {
     if (!getToken()) return;
     bindControls();
-    startObserver();
-    window.setTimeout(reload, 250);
-    window.setTimeout(reload, 1000);
-    window.setTimeout(reload, 2200);
+    scheduleReload(400);
   }
 
   window.WebTavernNotificationsCompact = {
