@@ -4,17 +4,17 @@
   const pageId = document.body ? document.body.getAttribute('data-page') : '';
   if (pageId !== 'notifications') return;
 
-  let isRenderingCompactList = false;
+  let rendering = false;
   let reloadTimer = null;
+  let readMarkedOnce = false;
   let observerStarted = false;
-  let pageObserverStarted = false;
-  let deliveryCompactTimer = null;
 
   function qs(selector, root) { return (root || document).querySelector(selector); }
   function qsa(selector, root) { return Array.from((root || document).querySelectorAll(selector)); }
   function show(el) { if (el) el.classList.remove('hidden'); }
   function hide(el) { if (el) el.classList.add('hidden'); }
   function getToken() { return window.localStorage.getItem(TOKEN_KEY); }
+
   function escapeHtml(value) {
     return String(value ?? '')
       .replace(/&/g, '&amp;')
@@ -23,12 +23,40 @@
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
+
   function formatDateTimeRu(value) {
     if (!value) return '';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
     return date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
+
+  function normalizeList(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.results)) return payload.results;
+    return [];
+  }
+
+  async function apiRequest(path, options = {}) {
+    const token = getToken();
+    const response = await fetch(`${API_BASE}${path}`, {
+      method: options.method || 'GET',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Token ${token}` } : {})
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    const text = await response.text();
+    let payload = null;
+    if (text) {
+      try { payload = JSON.parse(text); } catch (_) { payload = null; }
+    }
+    if (!response.ok) throw new Error(payload?.detail || payload?.error || `Request failed: ${response.status}`);
+    return payload;
+  }
+
   function notificationEventLabel(eventType) {
     switch (eventType) {
       case 'booking_hold_created': return 'Резерв';
@@ -46,151 +74,198 @@
       default: return eventType || 'Событие';
     }
   }
-  async function apiRequest(path, options) {
-    const token = getToken();
-    const response = await fetch(`${API_BASE}${path}`, {
-      method: options?.method || 'GET',
-      cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Token ${token}` } : {})
-      },
-      body: options?.body ? JSON.stringify(options.body) : undefined
-    });
-    const text = await response.text();
-    let payload = null;
-    if (text) {
-      try { payload = JSON.parse(text); } catch { payload = null; }
+
+  function deliveryStatusLabel(status) {
+    switch (status) {
+      case 'sent': return 'Отправлено';
+      case 'failed': return 'Ошибка';
+      case 'skipped': return 'Пропущено';
+      default: return status || 'Неизвестно';
     }
-    if (!response.ok) throw new Error(payload?.detail || payload?.error || `Request failed: ${response.status}`);
-    return payload;
   }
-  function normalizeList(payload) {
-    if (Array.isArray(payload)) return payload;
-    if (Array.isArray(payload?.results)) return payload.results;
-    return [];
+
+  function deliveryChannelLabel(channel) {
+    switch (channel) {
+      case 'email': return 'Email';
+      case 'sms': return 'SMS';
+      default: return channel || 'Канал';
+    }
   }
-  function updateNotificationBadge(count) {
+
+  function updateHeaderBadge(count) {
     const badge = qs('#header-notification-badge');
     if (!badge) return;
     const value = Number(count || 0);
     badge.textContent = String(value);
     badge.classList.toggle('hidden', value <= 0);
   }
-  async function refreshSummary() {
-    const summaryRoot = qs('#notifications-summary');
-    try {
-      const summary = await apiRequest('/notifications/summary/');
-      if (summaryRoot) {
-        summaryRoot.innerHTML = `
-          <div><span>Непрочитанные</span><strong>${escapeHtml(summary.unread_total || 0)}</strong></div>
-          <div><span>Сегодня</span><strong>${escapeHtml(summary.today_total || 0)}</strong></div>
-          <div><span>Всего</span><strong>${escapeHtml(summary.all_total || 0)}</strong></div>
-        `;
-      }
-      updateNotificationBadge(summary.unread_total || 0);
-    } catch (_) {}
+
+  function selectedParams() {
+    const params = new URLSearchParams();
+    const readFilter = qs('#notifications-read-filter');
+    const typeFilter = qs('#notifications-type-filter');
+    const venueFilter = qs('#notifications-venue-filter');
+    if (readFilter && readFilter.value) params.set('is_read', readFilter.value);
+    if (typeFilter && typeFilter.value) params.set('event_type', typeFilter.value);
+    if (venueFilter && venueFilter.value) params.set('venue', venueFilter.value);
+    const text = params.toString();
+    return text ? `?${text}` : '';
   }
-  function renderCompactNotificationCard(item) {
+
+  function renderSummary(summaryData) {
+    const root = qs('#notifications-summary');
+    if (!root) return;
+    const deliveries = summaryData.deliveries || {};
+    root.innerHTML = `
+      <div><span>Непрочитанные</span><strong>${escapeHtml(summaryData.unread_total || 0)}</strong></div>
+      <div><span>Сегодня</span><strong>${escapeHtml(summaryData.today_total || 0)}</strong></div>
+      <div><span>Всего</span><strong>${escapeHtml(summaryData.all_total || 0)}</strong></div>
+      <div><span>Email отправлено</span><strong>${escapeHtml(deliveries.email_sent || 0)}</strong></div>
+      <div><span>SMS отправлено</span><strong>${escapeHtml(deliveries.sms_sent || 0)}</strong></div>
+      <div><span>Ошибки каналов</span><strong>${escapeHtml((deliveries.email_failed || 0) + (deliveries.sms_failed || 0))}</strong></div>
+    `;
+    updateHeaderBadge(summaryData.unread_total || 0);
+  }
+
+  function notificationCard(item) {
     return `
-      <article class="compact-card notification-card${item.is_read ? ' is-read' : ''}${item.target_url ? ' notification-card-clickable' : ''}" id="notification-${escapeHtml(item.id)}" data-compact-notification-card="${escapeHtml(item.id)}" data-target-url="${escapeHtml(item.target_url || '/notifications/')}">
+      <article class="compact-card notification-card${item.is_read ? ' is-read' : ''}${item.target_url ? ' notification-card-clickable' : ''}" data-main-notification-card="${escapeHtml(item.id)}" data-target-url="${escapeHtml(item.target_url || '/notifications/')}">
         <div class="notification-card-head">
           <div class="eyebrow-row">
             <span class="pill muted-chip">${escapeHtml(item.venue_name || 'Система')}</span>
             <span class="pill muted-chip">${escapeHtml(notificationEventLabel(item.event_type))}</span>
             ${item.is_read ? '<span class="pill muted-chip">Прочитано</span>' : '<span class="pill pill-rating">Новое</span>'}
           </div>
-          <span class="muted-block">${escapeHtml(formatDateTimeRu(item.created_at) || '')}</span>
+          <span class="muted-block">${escapeHtml(formatDateTimeRu(item.created_at))}</span>
         </div>
         <h3>${escapeHtml(item.title || 'Уведомление')}</h3>
         <p>${escapeHtml(item.message || '')}</p>
-        ${item.target_url ? `<div class="button-row top-gap"><a class="button button-secondary" href="${escapeHtml(item.target_url)}" data-compact-notification-open="${escapeHtml(item.id)}">Открыть</a></div>` : ''}
+        ${item.target_url ? `<div class="button-row top-gap"><a class="button button-secondary" href="${escapeHtml(item.target_url)}">Открыть</a></div>` : ''}
       </article>
     `;
   }
-  function bindOpenHandlers(root) {
-    qsa('[data-compact-notification-card]', root).forEach((card) => {
-      if (card.dataset.compactBound === 'true') return;
-      card.dataset.compactBound = 'true';
-      card.addEventListener('click', async function (event) {
+
+  function renderNotifications(items) {
+    const list = qs('#notifications-list');
+    const empty = qs('#notifications-empty');
+    const caption = qs('#notifications-caption');
+    if (!list) return;
+
+    const sorted = [...items].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (!sorted.length) {
+      list.innerHTML = '';
+      if (caption) caption.textContent = 'Уведомлений пока нет.';
+      if (empty) show(empty);
+      return;
+    }
+
+    if (empty) hide(empty);
+    const unread = sorted.filter((item) => !item.is_read);
+    const visible = unread.length ? unread.slice(0, 10) : sorted.slice(0, 5);
+    const visibleIds = new Set(visible.map((item) => item.id));
+    const hidden = sorted.filter((item) => !visibleIds.has(item.id));
+
+    if (caption) {
+      caption.textContent = unread.length
+        ? `Показаны последние ${visible.length} непрочитанных уведомлений. Остальные скрыты.`
+        : `Все уведомления прочитаны. Показаны ${visible.length} последних, остальные скрыты.`;
+    }
+
+    list.innerHTML = `
+      <div class="notifications-compact-visible">
+        ${visible.map(notificationCard).join('')}
+      </div>
+      ${hidden.length ? `
+        <details class="notifications-hidden-list">
+          <summary>Показать остальные уведомления: ${hidden.length}</summary>
+          <div class="page-stack top-gap">${hidden.map(notificationCard).join('')}</div>
+        </details>
+      ` : ''}
+    `;
+    list.setAttribute('data-main-notifications-rendered', 'true');
+
+    qsa('[data-main-notification-card]', list).forEach((card) => {
+      card.addEventListener('click', (event) => {
         if (event.target.closest('a, button, input, select, textarea, label, summary')) return;
-        const targetUrl = card.getAttribute('data-target-url') || '/notifications/';
-        window.location.href = targetUrl;
+        window.location.href = card.getAttribute('data-target-url') || '/notifications/';
       });
     });
   }
-  function renderCompactList(notifications) {
-    const listRoot = qs('#notifications-list');
-    const empty = qs('#notifications-empty');
-    const caption = qs('#notifications-caption');
-    if (!listRoot) return;
 
-    const items = [...notifications].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    isRenderingCompactList = true;
-    try {
-      if (!items.length) {
-        listRoot.innerHTML = '';
-        listRoot.setAttribute('data-notifications-compact-rendered', 'true');
-        if (caption) caption.textContent = 'Уведомлений пока нет.';
-        if (empty) show(empty);
-        return;
-      }
-
-      if (empty) hide(empty);
-      const unread = items.filter((item) => !item.is_read);
-      const visible = unread.length ? unread.slice(0, 10) : items.slice(0, 5);
-      const visibleIds = new Set(visible.map((item) => item.id));
-      const hiddenItems = items.filter((item) => !visibleIds.has(item.id));
-      const modeText = unread.length
-        ? `Показаны последние ${visible.length} непрочитанных уведомлений. Остальные скрыты в раскрывающемся списке.`
-        : `Все уведомления прочитаны. Показаны ${visible.length} последних, остальные скрыты.`;
-
-      if (caption) caption.textContent = modeText;
-      listRoot.innerHTML = `
-        <div class="notifications-compact-visible">
-          ${visible.map(renderCompactNotificationCard).join('')}
+  function deliveryCard(item) {
+    const statusClass = item.status === 'sent' ? 'pill-rating' : (item.status === 'failed' ? 'danger-chip' : 'muted-chip');
+    return `
+      <article class="delivery-card" data-main-delivery-card="true">
+        <div class="delivery-card-head">
+          <div class="eyebrow-row">
+            <span class="pill muted-chip">${escapeHtml(deliveryChannelLabel(item.channel))}</span>
+            <span class="pill ${statusClass}">${escapeHtml(deliveryStatusLabel(item.status))}</span>
+            <span class="pill muted-chip">${escapeHtml(item.provider || 'provider')}</span>
+          </div>
+          <span class="muted-block">${escapeHtml(formatDateTimeRu(item.created_at))}</span>
         </div>
-        ${hiddenItems.length ? `
-          <details class="notifications-hidden-list">
-            <summary>Показать остальные уведомления: ${hiddenItems.length}</summary>
-            <div class="page-stack top-gap">
-              ${hiddenItems.map(renderCompactNotificationCard).join('')}
-            </div>
-          </details>
-        ` : ''}
-      `;
-      listRoot.setAttribute('data-notifications-compact-rendered', 'true');
-      bindOpenHandlers(listRoot);
-    } finally {
-      window.setTimeout(() => { isRenderingCompactList = false; }, 0);
-    }
+        <h3>${escapeHtml(item.notification_title || 'Уведомление')}</h3>
+        <p>${escapeHtml(item.notification_message || '')}</p>
+        <p class="muted-block">Куда: ${escapeHtml(item.destination || 'не указано')}</p>
+        ${item.error ? `<p class="error-text">${escapeHtml(item.error)}</p>` : ''}
+      </article>
+    `;
   }
-  async function markVisiblePageAsReadIfNeeded(notifications) {
-    const hasUnread = notifications.some((item) => !item.is_read);
-    if (!hasUnread) return false;
+
+  function renderDeliveries(items) {
+    const root = qs('#notifications-delivery-list');
+    const empty = qs('#notifications-delivery-empty');
+    if (!root) return;
+    const sorted = [...items].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (!sorted.length) {
+      root.innerHTML = '';
+      if (empty) show(empty);
+      return;
+    }
+    if (empty) hide(empty);
+    const visible = sorted.slice(0, 5);
+    const hidden = sorted.slice(5);
+    root.innerHTML = `
+      <div class="notifications-compact-visible">${visible.map(deliveryCard).join('')}</div>
+      ${hidden.length ? `
+        <details class="notifications-hidden-list notifications-delivery-hidden">
+          <summary>Показать старые Email/SMS отправки: ${hidden.length}</summary>
+          <div class="page-stack top-gap">${hidden.map(deliveryCard).join('')}</div>
+        </details>
+      ` : ''}
+    `;
+    root.setAttribute('data-main-deliveries-rendered', 'true');
+  }
+
+  async function markAllReadOnce(items) {
+    if (readMarkedOnce || !items.some((item) => !item.is_read)) return;
+    readMarkedOnce = true;
     try {
       await apiRequest('/notifications/mark_all_read/', { method: 'POST', body: {} });
-      await refreshSummary();
-      return true;
-    } catch (_) {
-      return false;
-    }
+      const summary = await apiRequest(`/notifications/summary/${selectedParams()}`);
+      renderSummary(summary);
+      updateHeaderBadge(0);
+    } catch (_) {}
   }
-  async function loadCompactNotifications(options = {}) {
-    const listRoot = qs('#notifications-list');
+
+  async function loadNotifications() {
     const error = qs('#notifications-error');
-    if (!listRoot || !getToken()) return;
+    if (!getToken()) return;
     if (error) hide(error);
+    const suffix = selectedParams();
     try {
-      const payload = await apiRequest('/notifications/');
-      const notifications = normalizeList(payload);
-      renderCompactList(notifications);
-      const marked = await markVisiblePageAsReadIfNeeded(notifications);
-      if (marked && options.reloadAfterRead !== false) {
-        window.setTimeout(() => loadCompactNotifications({ reloadAfterRead: false }), 450);
-      }
-      scheduleDeliveryCompact(180);
+      const [itemsPayload, summary] = await Promise.all([
+        apiRequest(`/notifications/${suffix}`),
+        apiRequest(`/notifications/summary/${suffix}`)
+      ]);
+      const items = normalizeList(itemsPayload);
+      rendering = true;
+      renderSummary(summary);
+      renderNotifications(items);
+      rendering = false;
+      await markAllReadOnce(items);
     } catch (err) {
+      rendering = false;
       if (error) {
         error.textContent = err.message || 'Не удалось загрузить уведомления.';
         show(error);
@@ -198,138 +273,148 @@
     }
   }
 
-  function normalizeText(value) {
-    return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
-  }
-  function findDeliverySection() {
-    const roots = qsa('section.card, article.card, .card').filter((node) => {
-      const text = normalizeText(node.textContent);
-      return text.includes('email/sms отправки') || text.includes('журнал доставки') || text.includes('последние отправки');
-    });
-    return roots.sort((a, b) => a.textContent.length - b.textContent.length)[0] || null;
-  }
-  function findDeliveryListRoot(section) {
-    if (!section) return null;
-    const byId = qsa('[id*="deliver"], [data-deliveries-list]', section)
-      .find((node) => qsa('article, .subcard, .compact-card, .delivery-card, [data-delivery-id]', node).length >= 2);
-    if (byId) return byId;
-    const stacks = qsa('.page-stack, .list-stack, .notifications-list', section)
-      .filter((node) => qsa('article, .subcard, .compact-card, .delivery-card, [data-delivery-id]', node).length >= 2);
-    if (stacks.length) return stacks.sort((a, b) => b.children.length - a.children.length)[0];
-    return section;
-  }
-  function getDeliveryCards(root) {
-    if (!root) return [];
-    const nodes = qsa('[data-delivery-id], .delivery-card, .notification-delivery-card, .notification-delivery, article, .subcard', root)
-      .filter((node) => !node.closest('.notifications-delivery-hidden') && !node.matches('details, summary'))
-      .filter((node) => node !== root)
-      .filter((node) => {
-        const text = normalizeText(node.textContent);
-        return text.includes('email') || text.includes('sms') || text.includes('smtp') || text.includes('smsru') || text.includes('отправ') || text.includes('ошиб');
-      });
-    return nodes.filter((node, index, list) => !list.some((other, otherIndex) => otherIndex !== index && other.contains(node)));
-  }
-  function compactDeliveryJournal() {
-    const section = findDeliverySection();
-    const root = findDeliveryListRoot(section);
-    if (!root) return;
-
-    qsa('.notifications-delivery-hidden', root).forEach((details) => {
-      const nestedCards = qsa('[data-delivery-id], .delivery-card, .notification-delivery-card, .notification-delivery, article, .subcard', details);
-      nestedCards.forEach((card) => root.insertBefore(card, details));
-      details.remove();
-    });
-
-    const cards = getDeliveryCards(root);
-    if (cards.length <= 5) {
-      root.setAttribute('data-deliveries-compact-rendered', 'true');
-      return;
+  async function loadDeliveries() {
+    if (!getToken()) return;
+    try {
+      const payload = await apiRequest('/notifications/deliveries/');
+      rendering = true;
+      renderDeliveries(normalizeList(payload));
+      rendering = false;
+    } catch (_) {
+      rendering = false;
     }
+  }
 
-    const hiddenCards = cards.slice(5);
-    const details = document.createElement('details');
-    details.className = 'notifications-hidden-list notifications-delivery-hidden';
-    details.innerHTML = `<summary>Показать старые Email/SMS отправки: ${hiddenCards.length}</summary><div class="page-stack top-gap"></div>`;
-    const hiddenRoot = qs('.page-stack', details);
-    hiddenCards.forEach((card) => hiddenRoot.appendChild(card));
-    const lastVisible = cards[4];
-    lastVisible.after(details);
-    root.setAttribute('data-deliveries-compact-rendered', 'true');
+  async function loadPreferences() {
+    try {
+      const prefs = await apiRequest('/notifications/preferences/');
+      const prefEmail = qs('#pref-email-enabled');
+      const prefSms = qs('#pref-sms-enabled');
+      const prefBookingEmail = qs('#pref-booking-email-enabled');
+      const prefBookingSms = qs('#pref-booking-sms-enabled');
+      if (prefEmail) prefEmail.checked = !!prefs.email_enabled;
+      if (prefSms) prefSms.checked = !!prefs.sms_enabled;
+      if (prefBookingEmail) prefBookingEmail.checked = !!prefs.booking_email_enabled;
+      if (prefBookingSms) prefBookingSms.checked = !!prefs.booking_sms_enabled;
+    } catch (_) {}
   }
-  function scheduleDeliveryCompact(delay = 120) {
-    if (deliveryCompactTimer) window.clearTimeout(deliveryCompactTimer);
-    deliveryCompactTimer = window.setTimeout(() => {
-      deliveryCompactTimer = null;
-      compactDeliveryJournal();
-    }, delay);
+
+  async function savePreferences() {
+    const prefMessage = qs('#notifications-preferences-message');
+    const prefError = qs('#notifications-preferences-error');
+    const button = qs('#notifications-save-preferences');
+    if (prefMessage) hide(prefMessage);
+    if (prefError) hide(prefError);
+    const payload = {
+      email_enabled: !!qs('#pref-email-enabled')?.checked,
+      sms_enabled: !!qs('#pref-sms-enabled')?.checked,
+      booking_email_enabled: !!qs('#pref-booking-email-enabled')?.checked,
+      booking_sms_enabled: !!qs('#pref-booking-sms-enabled')?.checked
+    };
+    try {
+      if (button) button.disabled = true;
+      await apiRequest('/notifications/preferences/', { method: 'PATCH', body: payload });
+      if (prefMessage) { prefMessage.textContent = 'Каналы уведомлений сохранены.'; show(prefMessage); }
+    } catch (err) {
+      if (prefError) { prefError.textContent = err.message || 'Не удалось сохранить каналы уведомлений.'; show(prefError); }
+    } finally {
+      if (button) button.disabled = false;
+    }
   }
-  function scheduleCompactReload(delay = 180) {
+
+  async function sendTestChannels() {
+    const prefMessage = qs('#notifications-preferences-message');
+    const prefError = qs('#notifications-preferences-error');
+    const button = qs('#notifications-test-channels');
+    if (prefMessage) hide(prefMessage);
+    if (prefError) hide(prefError);
+    try {
+      if (button) button.disabled = true;
+      await apiRequest('/notifications/test-channels/', { method: 'POST', body: {} });
+      if (prefMessage) { prefMessage.textContent = 'Тестовое уведомление создано. Проверьте журнал отправок ниже.'; show(prefMessage); }
+      await reload();
+    } catch (err) {
+      if (prefError) { prefError.textContent = err.message || 'Не удалось отправить тестовое уведомление.'; show(prefError); }
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  function cloneAndBind(selector, handler, label) {
+    const node = qs(selector);
+    if (!node) return;
+    const clone = node.cloneNode(true);
+    if (label) clone.textContent = label;
+    node.replaceWith(clone);
+    clone.addEventListener('click', (event) => {
+      event.preventDefault();
+      handler();
+    });
+  }
+
+  function bindControls() {
+    const warning = qs('#notifications-auth-warning');
+    const dashboard = qs('#notifications-dashboard');
+    const readAll = qs('#notifications-read-all');
+    if (warning) hide(warning);
+    if (dashboard) show(dashboard);
+    if (readAll) hide(readAll);
+
+    cloneAndBind('#notifications-refresh', reload, 'Обновить список');
+    cloneAndBind('#notifications-save-preferences', savePreferences);
+    cloneAndBind('#notifications-test-channels', sendTestChannels);
+
+    ['#notifications-read-filter', '#notifications-type-filter', '#notifications-venue-filter'].forEach((selector) => {
+      const control = qs(selector);
+      if (!control || control.dataset.mainNotificationsBound === 'true') return;
+      control.dataset.mainNotificationsBound = 'true';
+      control.addEventListener('change', () => loadNotifications());
+    });
+  }
+
+  function scheduleReload(delay = 180) {
     if (reloadTimer) window.clearTimeout(reloadTimer);
     reloadTimer = window.setTimeout(() => {
       reloadTimer = null;
-      loadCompactNotifications();
-      scheduleDeliveryCompact(220);
+      reload();
     }, delay);
   }
-  function startCompactObserver() {
-    const listRoot = qs('#notifications-list');
-    if (!listRoot || observerStarted) return;
-    observerStarted = true;
-    const observer = new MutationObserver(() => {
-      if (isRenderingCompactList) return;
-      const hasCompactMarkup = !!qs('.notifications-compact-visible, .notifications-hidden-list', listRoot);
-      if (!hasCompactMarkup) scheduleCompactReload(120);
-    });
-    observer.observe(listRoot, { childList: true, subtree: false });
+
+  async function reload() {
+    await Promise.all([loadNotifications(), loadDeliveries(), loadPreferences()]);
   }
-  function startPageObserver() {
+
+  function startObserver() {
     const dashboard = qs('#notifications-dashboard');
-    if (!dashboard || pageObserverStarted) return;
-    pageObserverStarted = true;
+    if (!dashboard || observerStarted) return;
+    observerStarted = true;
     const observer = new MutationObserver((mutations) => {
-      if (isRenderingCompactList) return;
-      const deliveryChanged = mutations.some((mutation) => Array.from(mutation.addedNodes || []).some((node) => {
+      if (rendering) return;
+      const important = mutations.some((mutation) => Array.from(mutation.addedNodes || []).some((node) => {
         if (!(node instanceof HTMLElement)) return false;
-        const text = normalizeText(node.textContent);
-        return text.includes('email') || text.includes('sms') || text.includes('отправ') || text.includes('ошиб');
+        if (node.closest && (node.closest('.notifications-hidden-list') || node.closest('[data-main-notification-card]') || node.closest('[data-main-delivery-card]'))) return false;
+        const text = String(node.textContent || '').toLowerCase();
+        return text.includes('уведом') || text.includes('email') || text.includes('sms') || text.includes('отправ') || text.includes('ошиб');
       }));
-      if (deliveryChanged) scheduleDeliveryCompact(120);
+      if (important) scheduleReload(140);
     });
     observer.observe(dashboard, { childList: true, subtree: true });
   }
-  function simplifyNotificationControls() {
-    const readAll = qs('#notifications-read-all');
-    const refresh = qs('#notifications-refresh');
-    if (readAll) hide(readAll);
-    if (refresh) {
-      const cleanRefresh = refresh.cloneNode(true);
-      cleanRefresh.textContent = 'Обновить список';
-      refresh.replaceWith(cleanRefresh);
-      cleanRefresh.addEventListener('click', function (event) {
-        event.preventDefault();
-        loadCompactNotifications();
-        scheduleDeliveryCompact(220);
-      });
-    }
-  }
+
   function start() {
-    const dashboard = qs('#notifications-dashboard');
-    if (!dashboard) return;
-    simplifyNotificationControls();
-    startCompactObserver();
-    startPageObserver();
-    window.setTimeout(() => loadCompactNotifications(), 150);
-    window.setTimeout(() => loadCompactNotifications(), 900);
-    window.setTimeout(() => loadCompactNotifications(), 1800);
-    window.setTimeout(() => compactDeliveryJournal(), 350);
-    window.setTimeout(() => compactDeliveryJournal(), 1200);
-    window.setTimeout(() => compactDeliveryJournal(), 2400);
+    if (!getToken()) return;
+    bindControls();
+    startObserver();
+    window.setTimeout(reload, 250);
+    window.setTimeout(reload, 1000);
+    window.setTimeout(reload, 2200);
   }
 
   window.WebTavernNotificationsCompact = {
-    reload: loadCompactNotifications,
-    scheduleReload: scheduleCompactReload,
-    compactDeliveries: compactDeliveryJournal
+    reload,
+    scheduleReload,
+    loadNotifications,
+    loadDeliveries
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
