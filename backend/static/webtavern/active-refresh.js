@@ -346,8 +346,11 @@
       return;
     }
     if (page === 'notifications') {
-      clickIfReady('#notifications-refresh');
-      refreshHeaderBadge();
+      if (window.WebTavernNotificationsCompact && typeof window.WebTavernNotificationsCompact.scheduleReload === 'function') {
+        window.WebTavernNotificationsCompact.scheduleReload(900);
+      } else {
+        clickIfReady('#notifications-refresh');
+      }
       return;
     }
     if (page === 'manager') {
@@ -399,7 +402,7 @@
   window.addEventListener('focus', () => { window.setTimeout(tick, 500); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) window.setTimeout(tick, 500); });
   document.addEventListener('DOMContentLoaded', () => {
-    refreshHeaderBadge();
+    if (pageId() !== 'notifications') refreshHeaderBadge();
     window.setTimeout(tick, 1200);
     window.setInterval(tick, REFRESH_INTERVAL_MS);
   });
