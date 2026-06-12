@@ -33,6 +33,15 @@ body[data-page="notifications"] #notifications-list {
   margin-bottom: 10px;
 }
 
+.notifications-delivery-hidden {
+  margin-top: 12px;
+}
+
+.notifications-delivery-hidden > .page-stack {
+  display: grid;
+  gap: 12px;
+}
+
 body[data-page="notifications"] .notification-card {
   transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
