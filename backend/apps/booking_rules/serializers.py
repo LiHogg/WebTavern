@@ -1,9 +1,12 @@
 from rest_framework import serializers
 
 from .models import BookingPriceRule, VenueBookingRule
+from .working_hours import normalize_working_hours, summarize_working_hours
 
 
 class VenueBookingRuleSerializer(serializers.ModelSerializer):
+    working_hours_summary = serializers.SerializerMethodField()
+
     class Meta:
         model = VenueBookingRule
         fields = [
@@ -21,9 +24,18 @@ class VenueBookingRuleSerializer(serializers.ModelSerializer):
             "allow_table_combination",
             "allow_shared_seating",
             "allow_manager_reschedule",
+            "working_hours",
+            "working_hours_summary",
             "deposit_amount",
             "deposit_currency",
         ]
+        read_only_fields = ["id", "working_hours_summary"]
+
+    def validate_working_hours(self, value):
+        return normalize_working_hours(value)
+
+    def get_working_hours_summary(self, obj):
+        return summarize_working_hours(obj.working_hours)
 
 class BookingPriceRuleSerializer(serializers.ModelSerializer):
     hall_name = serializers.CharField(source="hall.name", read_only=True)
@@ -65,4 +77,3 @@ class BookingPriceRuleSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"table_count": "Для правила по столам укажите количество столов от 1."})
             attrs["hall"] = None
         return attrs
-
