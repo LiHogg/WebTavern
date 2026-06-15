@@ -9,12 +9,28 @@ def apply_venue_working_hours_patch():
     if _applied:
         return
 
-    from rest_framework import decorators, permissions, response, status
+    from rest_framework import decorators, permissions, response, serializers, status
 
     from apps.booking_rules.models import VenueBookingRule
     from apps.booking_rules.working_hours import normalize_working_hours, summarize_working_hours
     from apps.common.access import user_can_manage_venue
     from .views import VenueViewSet
+    from .serializers import VenueBookingRuleEmbeddedSerializer
+
+    # Venue detail already embeds booking_rule. Add the schedule there too so the
+    # client page has the same source of truth as the dedicated working-hours API.
+    if 'working_hours' not in VenueBookingRuleEmbeddedSerializer.Meta.fields:
+        VenueBookingRuleEmbeddedSerializer.Meta.fields = list(VenueBookingRuleEmbeddedSerializer.Meta.fields) + [
+            'working_hours',
+            'working_hours_summary',
+        ]
+        VenueBookingRuleEmbeddedSerializer._declared_fields['working_hours'] = serializers.JSONField(read_only=True)
+        VenueBookingRuleEmbeddedSerializer._declared_fields['working_hours_summary'] = serializers.SerializerMethodField()
+
+        def get_working_hours_summary(self, obj):
+            return summarize_working_hours(obj.working_hours)
+
+        VenueBookingRuleEmbeddedSerializer.get_working_hours_summary = get_working_hours_summary
 
     def working_hours(self, request, slug=None):
         venue = self.get_object()
