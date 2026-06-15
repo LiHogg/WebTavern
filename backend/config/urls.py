@@ -35,9 +35,11 @@ from apps.payments.views import PaymentViewSet, initialize_payment, payment_webh
 from apps.tables.views import TableViewSet
 from apps.users.urls import urlpatterns as auth_urlpatterns
 from apps.venues.views import VenueViewSet
+from apps.venues.working_hours_patch import apply_venue_working_hours_patch
 from apps.reviews.views import ReviewViewSet
 
 install_http_email_delivery()
+apply_venue_working_hours_patch()
 
 router = DefaultRouter()
 router.register("venues", VenueViewSet, basename="venue")
