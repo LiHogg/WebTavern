@@ -8,4 +8,6 @@ class BookingsConfig(AppConfig):
 
     def ready(self):
         from .flow_patch import apply_booking_flow_patch
+        from .working_hours_patch import apply_booking_working_hours_patch
         apply_booking_flow_patch()
+        apply_booking_working_hours_patch()
