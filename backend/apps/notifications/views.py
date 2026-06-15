@@ -93,6 +93,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         return response.Response({
             'project': {
                 'email_enabled': bool(getattr(settings, 'ENABLE_EMAIL_NOTIFICATIONS', False)),
+                'email_provider': str(getattr(settings, 'EMAIL_PROVIDER', '') or ''),
                 'email_backend': str(getattr(settings, 'EMAIL_BACKEND', '') or ''),
                 'email_host': str(getattr(settings, 'EMAIL_HOST', '') or ''),
                 'email_port': getattr(settings, 'EMAIL_PORT', ''),
@@ -100,6 +101,9 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
                 'email_password_set': bool(getattr(settings, 'EMAIL_HOST_PASSWORD', '')),
                 'email_use_ssl': bool(getattr(settings, 'EMAIL_USE_SSL', False)),
                 'email_use_tls': bool(getattr(settings, 'EMAIL_USE_TLS', False)),
+                'email_force_ipv4': bool(getattr(settings, 'EMAIL_FORCE_IPV4', False)),
+                'email_http_api_url_set': bool(getattr(settings, 'EMAIL_HTTP_API_URL', '')),
+                'email_http_api_token_set': bool(getattr(settings, 'EMAIL_HTTP_API_TOKEN', '')),
                 'default_from_email': str(getattr(settings, 'DEFAULT_FROM_EMAIL', '') or ''),
                 'email_recipient_override': str(getattr(settings, 'EMAIL_RECIPIENT_OVERRIDE', '') or ''),
                 'sms_enabled': bool(getattr(settings, 'ENABLE_SMS_NOTIFICATIONS', False)),
