@@ -2,6 +2,7 @@ from django.db import models
 
 from apps.common.models import TimeStampedModel
 from apps.venues.models import Venue
+from .working_hours import default_working_hours
 
 class VenueBookingRule(TimeStampedModel):
     venue = models.OneToOneField(Venue, on_delete=models.CASCADE, related_name="booking_rule", verbose_name="Заведение")
@@ -17,6 +18,7 @@ class VenueBookingRule(TimeStampedModel):
     allow_table_combination = models.BooleanField(default=False, verbose_name="Разрешить объединение столов")
     allow_shared_seating = models.BooleanField(default=False, verbose_name="Разрешить подсадку к занятым столам")
     allow_manager_reschedule = models.BooleanField(default=True, verbose_name="Разрешить менеджеру переносить бронь")
+    working_hours = models.JSONField(default=default_working_hours, verbose_name="График работы")
     deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Сумма предоплаты")
     deposit_currency = models.CharField(max_length=8, default="RUB", verbose_name="Валюта")
 
@@ -57,4 +59,3 @@ class BookingPriceRule(TimeStampedModel):
     def __str__(self) -> str:
         base = self.title or self.get_rule_type_display()
         return f"{self.venue.name} — {base}: {self.price_amount} {self.price_currency}"
-
