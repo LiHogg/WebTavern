@@ -17,12 +17,12 @@ DAY_LABELS = {
 
 
 def default_working_hours() -> dict[str, dict[str, Any]]:
-    """Default schedule keeps old behaviour: bookings are allowed almost all day."""
+    """Default schedule keeps old behaviour: bookings are allowed 24/7 until configured."""
     return {
         str(day): {
             'is_closed': False,
             'opens_at': '00:00',
-            'closes_at': '23:59',
+            'closes_at': '00:00',
         }
         for day in range(7)
     }
@@ -51,7 +51,7 @@ def normalize_working_hours(value: Any) -> dict[str, dict[str, Any]]:
             item = {}
         is_closed = bool(item.get('is_closed') or item.get('closed'))
         opens_at = _parse_time(item.get('opens_at'), '00:00')
-        closes_at = _parse_time(item.get('closes_at'), '23:59')
+        closes_at = _parse_time(item.get('closes_at'), '00:00')
         normalized[str(day)] = {
             'is_closed': is_closed,
             'opens_at': _format_time(opens_at),
@@ -64,7 +64,7 @@ def _candidate_interval_for_day(day_start: datetime, rule: dict[str, Any]) -> tu
     if not rule or rule.get('is_closed'):
         return None
     opens_at = _parse_time(rule.get('opens_at'), '00:00')
-    closes_at = _parse_time(rule.get('closes_at'), '23:59')
+    closes_at = _parse_time(rule.get('closes_at'), '00:00')
     start_dt = timezone.make_aware(datetime.combine(day_start.date(), opens_at), timezone.get_current_timezone())
     end_dt = timezone.make_aware(datetime.combine(day_start.date(), closes_at), timezone.get_current_timezone())
     if end_dt <= start_dt:
@@ -104,7 +104,7 @@ def booking_interval_working_hours_error(venue, booking_start: datetime, booking
     if day_rule.get('is_closed'):
         return f'Заведение закрыто в выбранный день ({weekday_label}). Выберите другое время.'
     opens_at = day_rule.get('opens_at', '00:00')
-    closes_at = day_rule.get('closes_at', '23:59')
+    closes_at = day_rule.get('closes_at', '00:00')
     return f'Выбранный интервал выходит за график работы заведения: {weekday_label}, {opens_at}–{closes_at}. Измените время бронирования.'
 
 
