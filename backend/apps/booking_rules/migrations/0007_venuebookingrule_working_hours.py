@@ -7,7 +7,7 @@ DEFAULT_WORKING_HOURS = {
     str(day): {
         'is_closed': False,
         'opens_at': '00:00',
-        'closes_at': '23:59',
+        'closes_at': '00:00',
     }
     for day in range(7)
 }
