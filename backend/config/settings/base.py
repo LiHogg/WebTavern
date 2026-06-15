@@ -165,6 +165,7 @@ CHANNEL_LAYERS = {
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 
+EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "smtp").strip().lower()
 _raw_email_backend = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
 EMAIL_FORCE_IPV4 = os.getenv("EMAIL_FORCE_IPV4", "true").lower() in {"1", "true", "yes", "on"}
 if EMAIL_FORCE_IPV4 and _raw_email_backend == "django.core.mail.backends.smtp.EmailBackend":
@@ -182,6 +183,12 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@example.com")
 SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 EMAIL_SUBJECT_PREFIX = os.getenv("EMAIL_SUBJECT_PREFIX", "[WebTavern]")
 ENABLE_EMAIL_NOTIFICATIONS = os.getenv("ENABLE_EMAIL_NOTIFICATIONS", "true").lower() == "true"
+# HTTP API email delivery. EMAIL_PROVIDER=http uses this endpoint instead of SMTP.
+EMAIL_HTTP_API_URL = os.getenv("EMAIL_HTTP_API_URL", "").strip()
+EMAIL_HTTP_API_TOKEN = os.getenv("EMAIL_HTTP_API_TOKEN", "").strip()
+EMAIL_HTTP_API_AUTH_HEADER = os.getenv("EMAIL_HTTP_API_AUTH_HEADER", "Authorization").strip()
+EMAIL_HTTP_API_TOKEN_PREFIX = os.getenv("EMAIL_HTTP_API_TOKEN_PREFIX", "Bearer").strip()
+EMAIL_HTTP_TIMEOUT_SECONDS = int(os.getenv("EMAIL_HTTP_TIMEOUT_SECONDS", os.getenv("EMAIL_TIMEOUT_SECONDS", "10")) or 10)
 # When this value is set, every outgoing email notification is sent to this mailbox.
 # It is useful for local/demo testing with real SMTP credentials.
 EMAIL_RECIPIENT_OVERRIDE = os.getenv("EMAIL_RECIPIENT_OVERRIDE", "").strip()
