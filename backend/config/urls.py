@@ -28,6 +28,7 @@ from apps.common.page_views import (
     venues_page,
 )
 from apps.halls.views import HallViewSet
+from apps.notifications.email_http_patch import install_http_email_delivery
 from apps.notifications.views import NotificationViewSet
 from apps.layouts.views import TableLayoutViewSet
 from apps.payments.views import PaymentViewSet, initialize_payment, payment_webhook_stub
@@ -35,6 +36,8 @@ from apps.tables.views import TableViewSet
 from apps.users.urls import urlpatterns as auth_urlpatterns
 from apps.venues.views import VenueViewSet
 from apps.reviews.views import ReviewViewSet
+
+install_http_email_delivery()
 
 router = DefaultRouter()
 router.register("venues", VenueViewSet, basename="venue")
