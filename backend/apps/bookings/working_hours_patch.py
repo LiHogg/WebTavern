@@ -24,7 +24,7 @@ def apply_booking_working_hours_patch():
         booking_end = validated.get('booking_end')
         error = booking_interval_working_hours_error(venue, booking_start, booking_end)
         if error:
-            raise serializers.ValidationError({'booking_start': error})
+            raise serializers.ValidationError({'detail': error})
         return validated
 
     def reschedule_validate(self, attrs):
@@ -35,7 +35,7 @@ def apply_booking_working_hours_patch():
         booking_end = validated.get('booking_end')
         error = booking_interval_working_hours_error(venue, booking_start, booking_end)
         if error:
-            raise serializers.ValidationError({'booking_start': error})
+            raise serializers.ValidationError({'detail': error})
         return validated
 
     BookingCreateSerializer.validate = create_validate
