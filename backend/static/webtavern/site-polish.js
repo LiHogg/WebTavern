@@ -380,6 +380,21 @@
     scheduleCumulativePricePreviewPatch();
   }
 
+  function polishAccountReviewCandidates(root) {
+    const scope = root || document;
+    const rootNode = scope.querySelector ? scope.querySelector('#account-review-candidates') : null;
+    const emptyNode = document.querySelector('#account-review-candidates-empty');
+    if (emptyNode) {
+      emptyNode.textContent = 'Здесь появятся заведения после завершённой брони. Отзывы для остальных заведений можно оставить на странице конкретного заведения.';
+    }
+    if (!rootNode) return;
+    rootNode.querySelectorAll('.review-candidate-card p.muted-block').forEach((paragraph) => {
+      if (paragraph.textContent.includes('без бронирования')) {
+        paragraph.textContent = 'Это заведение появилось здесь, потому что у вас уже была завершённая бронь. Отзывы для других заведений можно оставить на их страницах.';
+      }
+    });
+  }
+
   function polishVenueDetailPage(root) {
     balanceVenueDetailColumns(root);
     polishVenueLayoutStage(root);
@@ -389,6 +404,7 @@
   function boot() {
     enhanceVenueCards(document);
     polishVenueDetailPage(document);
+    polishAccountReviewCandidates(document);
     window.addEventListener('resize', () => scheduleResponsiveLayoutFit(document));
     window.addEventListener('orientationchange', () => scheduleResponsiveLayoutFit(document));
     document.addEventListener('click', (event) => {
@@ -406,6 +422,7 @@
       if (mutations.some((mutation) => mutation.addedNodes && mutation.addedNodes.length)) {
         enhanceVenueCards(document);
         polishVenueDetailPage(document);
+        polishAccountReviewCandidates(document);
         scheduleResponsiveLayoutFit(document);
       }
       if (mutations.some((mutation) => mutation.target && mutation.target.id === 'client-selected-table-inline')) {
