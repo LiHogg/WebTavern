@@ -1,6 +1,8 @@
-from django.db.models import Count, Prefetch
+from django.db.models import Count, Max, Prefetch
+from django.utils import timezone
 from rest_framework import decorators, mixins, parsers, permissions, response, status, viewsets
 
+from apps.bookings.models import Booking
 from apps.notifications.services import create_notification
 from apps.venues.models import Venue
 
@@ -86,24 +88,45 @@ class ReviewViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Gen
 
     @decorators.action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated], url_path='eligible')
     def eligible(self, request):
-        reviewed_ids = set(Review.objects.filter(author=request.user, parent__isnull=True).values_list('venue_id', flat=True))
-        venues = (
-            Venue.objects
-            .filter(is_published=True, status=Venue.Status.ACTIVE)
-            .exclude(id__in=reviewed_ids)
-            .order_by('city', 'name')[:12]
+        reviewed_ids = set(
+            Review.objects
+            .filter(author=request.user, parent__isnull=True)
+            .values_list('venue_id', flat=True)
         )
-        payload = [
-            {
+        visited_statuses = [
+            Booking.Status.PAID,
+            Booking.Status.CONFIRMED,
+            Booking.Status.COMPLETED,
+        ]
+        visits = (
+            Booking.objects
+            .filter(
+                customer=request.user,
+                booking_end__lte=timezone.now(),
+                status__in=visited_statuses,
+                venue__is_published=True,
+                venue__status=Venue.Status.ACTIVE,
+            )
+            .exclude(venue_id__in=reviewed_ids)
+            .values('venue_id')
+            .annotate(visits_count=Count('id'), last_visit=Max('booking_end'))
+            .order_by('-last_visit')[:12]
+        )
+        stats_by_venue = {item['venue_id']: item for item in visits}
+        venues_by_id = Venue.objects.in_bulk(stats_by_venue.keys())
+        payload = []
+        for venue_id, stats in stats_by_venue.items():
+            venue = venues_by_id.get(venue_id)
+            if not venue:
+                continue
+            payload.append({
                 'venue_id': venue.id,
                 'venue_name': venue.name,
                 'venue_slug': venue.slug,
                 'city': venue.city,
-                'visits_count': 0,
-                'last_visit': None,
-            }
-            for venue in venues
-        ]
+                'visits_count': stats.get('visits_count') or 0,
+                'last_visit': stats.get('last_visit'),
+            })
         return response.Response(payload, status=status.HTTP_200_OK)
 
     @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
